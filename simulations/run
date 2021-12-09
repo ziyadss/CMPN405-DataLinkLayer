@@ -1,0 +1,4 @@
+#!/bin/sh
+cd `dirname $0`
+../src/cmpn405_datalinklayer -n .:../src $*
+# for shared lib, use: opp_run -l ../src/cmpn405_datalinklayer -n .:../src $*
