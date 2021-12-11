@@ -1,23 +1,7 @@
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with this program.  If not, see http://www.gnu.org/licenses/.
-//
-
 #include "Node.h"
 
 namespace cmpn405_datalinklayer
 {
-
     Define_Module(Node);
 
     uint8_t Node::CRC(const std::string &payload, const uint8_t generator)
@@ -54,14 +38,21 @@ namespace cmpn405_datalinklayer
         return bytes;
     }
 
-    void Node::initialize()
+    void Node::openFile(const std::string &fileName)
     {
-        // TODO - Generated method body
+        inFile = std::ifstream("../input/" + fileName);
     }
+
+    void Node::initialize() {}
 
     void Node::handleMessage(cMessage *msg)
     {
-        // TODO - Generated method body
-    }
+        std::string inputPort = msg->getArrivalGate()->getName();
+        if (inputPort == "initPort")
+            return openFile(msg->getName());
 
-} //namespace
+        // send/receive logic
+
+        cancelAndDelete(msg);
+    }
+}
