@@ -21,14 +21,16 @@ Define_Module(Node);
 
 uint8_t Node::CRC(const std::string &payload, const uint8_t generator)
 {
-    uint16_t rem = 0;
-    for (const char &c : payload)
-        rem = ((rem << 8) + c) % generator;
+    uint8_t rem = 0;
 
-    int genMSB = log2(generator);
-    rem = (rem << genMSB) % generator;
+    for (const uint8_t &byte : payload)
+    {
+        rem ^= byte;
+        for (int i = 0; i < 8; i++)
+            rem = rem << 1 ^ (rem >> 7) * generator;
+    }
 
-    return rem >>= 1;
+    return rem;
 }
 
 std::vector<std::bitset<8>> Node::toBits(const std::string &payload)
