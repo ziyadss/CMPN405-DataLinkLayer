@@ -1,40 +1,25 @@
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-// 
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Lesser General Public License for more details.
-// 
-// You should have received a copy of the GNU Lesser General Public License
-// along with this program.  If not, see http://www.gnu.org/licenses/.
-// 
-
-#ifndef __CMPN405_DATALINKLAYER_NODE_H_
-#define __CMPN405_DATALINKLAYER_NODE_H_
+#pragma once
 
 #include <omnetpp.h>
 #include <bitset>
+#include <fstream>
 
 using namespace omnetpp;
 
-namespace cmpn405_datalinklayer {
-
-/**
- * TODO - Generated class
- */
-class Node : public cSimpleModule
+namespace cmpn405_datalinklayer
 {
-    uint8_t CRC(const std::string &payload, const uint8_t generator);
-    std::vector<std::bitset<8>> toBits(const std::string &payload);
+  class Node : public cSimpleModule
+  {
+    static uint8_t CRC(const std::string &payload, const uint8_t generator);
+    static std::vector<std::bitset<8>> toBits(const std::string &payload);
+    static std::string toBytes(const std::vector<std::bitset<8>> &bits);
+
+    void openFile(const std::string &fileName);
+
+    std::ifstream inFile;
+
   protected:
     virtual void initialize();
     virtual void handleMessage(cMessage *msg);
-};
-
-} //namespace
-
-#endif
+  };
+}
