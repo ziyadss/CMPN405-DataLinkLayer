@@ -1,6 +1,6 @@
 # Added by Ziyad
 .vscode
-# /out/
+out
 
 # Prerequisites
 *.d
