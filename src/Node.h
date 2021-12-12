@@ -3,6 +3,8 @@
 #include <omnetpp.h>
 #include <bitset>
 #include <fstream>
+#include <queue>
+#include "Frame_m.h"
 
 using namespace omnetpp;
 
@@ -10,13 +12,21 @@ namespace cmpn405_datalinklayer
 {
   class Node : public cSimpleModule
   {
-    static uint8_t CRC(const std::string &payload, const uint8_t generator);
+    static uint8_t CRC(const std::string payload, const uint8_t crcByte, const uint8_t generator);
     static std::vector<std::bitset<8>> toBits(const std::string &payload);
     static std::string toBytes(const std::vector<std::bitset<8>> &bits);
 
+    void sendMessage(bool ack, unsigned int piggyback_id);
+    void receiveMessage(Frame_Base *fmsg);
+
     void openFile(const std::string &fileName);
 
-    std::ifstream inFile;
+    static std::string Framing(std::string msg);
+    static std::string DeFraming(std::string msg);
+
+    std::queue<std::pair<std::string, std::string>> sendQueue;
+
+    unsigned int message_id;
 
   protected:
     virtual void initialize();
