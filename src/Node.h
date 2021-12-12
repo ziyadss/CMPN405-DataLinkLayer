@@ -16,7 +16,7 @@ namespace cmpn405_datalinklayer
     static std::vector<std::bitset<8>> toBits(const std::string &payload);
     static std::string toBytes(const std::vector<std::bitset<8>> &bits);
 
-    void sendMessage(bool ack, unsigned int piggyback_id);
+    void sendMessage(bool ack, int piggyback_id);
     void receiveMessage(Frame_Base *fmsg);
 
     void openFile(const std::string &fileName);
@@ -25,8 +25,10 @@ namespace cmpn405_datalinklayer
     static std::string DeFraming(std::string msg);
 
     std::queue<std::pair<std::string, std::string>> sendQueue;
+    // std::vector<std::pair<int, std::string>> sendQueue;
+    // std::vector<std::string> > receiveQueue;
 
-    unsigned int message_id;
+    unsigned int message_id = 0;
 
   protected:
     virtual void initialize();

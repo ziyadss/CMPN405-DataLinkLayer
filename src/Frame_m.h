@@ -17,7 +17,7 @@
 #endif
 
 // cplusplus {{
-typedef std::pair<unsigned int, unsigned int> Header;
+typedef std::pair<int, unsigned int> Header;
 // first is MessageID, second is its timestamp
 // }}
 
@@ -31,7 +31,7 @@ typedef std::pair<unsigned int, unsigned int> Header;
  *     string payload;
  *     char trailer;
  *     bool ack;
- *     unsigned int piggyback_id;
+ *     int piggyback_id;
  * }
  * </pre>
  *
@@ -66,7 +66,7 @@ protected:
   ::omnetpp::opp_string payload;
   char trailer;
   bool ack;
-  unsigned int piggyback_id;
+  int piggyback_id;
 
 private:
   void copy(const Frame_Base &other);
@@ -82,7 +82,7 @@ protected:
 
 public:
   virtual ~Frame_Base();
-  Frame_Base(const Header &header, const char *payload, char trailer, bool ack, unsigned int piggyback_id);
+  Frame_Base(const Header &header, const char *payload, char trailer, bool ack, int piggyback_id);
   // virtual Frame_Base *dup() const override { throw omnetpp::cRuntimeError("You forgot to manually add a dup() function to class Frame"); }
   virtual Frame_Base *dup() const override { return new Frame_Base(*this); }
   virtual void parsimPack(omnetpp::cCommBuffer *b) const override;
@@ -98,8 +98,11 @@ public:
   virtual void setTrailer(char trailer);
   virtual bool getAck() const;
   virtual void setAck(bool ack);
-  virtual unsigned int getPiggyback_id() const;
-  virtual void setPiggyback_id(unsigned int piggyback_id);
+  virtual int getPiggyback_id() const;
+  virtual void setPiggyback_id(int piggyback_id);
+
+  // Added by Ziyad
+  // virtual const char *getDisplayString() const override;
 };
 
 #endif // ifndef __FRAME_M_H

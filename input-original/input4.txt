@@ -1,0 +1,12 @@
+1000 An electric car is an automobile that is
+0000 propelled by one or more electric motors,
+0000 using energy stored in batteries.
+0010 Compared to internal combustion engine (ICE) vehicles,
+0011 electric cars are quieter,
+0000 have no exhaust emissions, and lower emissions overall.
+0000 In the United States and the European Union,
+1000 as of 2020, the total cost of ownership of recent electric vehicles
+0000 is cheaper$ than that of equivalent ICE cars,
+0000 due to lower fueling and maintenance costs$$.
+0000 Charging an electric car can be done at a variety of charging stations;
+1100 these charging stations can be installed in both houses/ and public areas.
