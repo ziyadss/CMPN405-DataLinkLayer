@@ -1,0 +1,8 @@
+0000 Sherlock Holmes is a fictional detective
+0010 created by British author$ Sir Arthur Conan Doyle.
+0100 Referring to himself as a/ "consulting detective" in the stories,
+0000 Holmes is known for his proficiency with observation,
+0000 deduction, forensic science,
+0000 and/ logical reasoning$ that borders on the fantastic,
+0101 which he employs when investigating cases for a wide variety of clients,
+0000 including Scotland Yard.

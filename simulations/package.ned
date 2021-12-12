@@ -13,6 +13,7 @@ network DataLinkLayer
 {
     parameters:
         int pairs = default(3);
+        int WindowSize = default(1);
     submodules:
         coordinator: Coordinator;
         nodes[2*pairs]: Node;

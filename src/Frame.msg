@@ -17,7 +17,7 @@
 // TODO generated message class
 //
 cplusplus {{
-typedef std::pair<unsigned int, unsigned int> Header;
+typedef std::pair<int, unsigned int> Header;
 // first is MessageID, second is its timestamp
 }}
 
@@ -29,6 +29,6 @@ packet Frame {
     string payload;
     char trailer;
     bool ack;
-    unsigned int piggyback_id;
+    int piggyback_id;
 //    piggyback_id is ID of next expected frame
 }
