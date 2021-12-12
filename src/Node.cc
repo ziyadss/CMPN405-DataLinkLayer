@@ -104,7 +104,6 @@ namespace cmpn405_datalinklayer
 
         std::string errors = sendQueue.front().first;
         std::string payload = Framing(sendQueue.front().second);
-        std::cout << '"' << payload << '"';
         Frame_Base *fmsg = new Frame_Base(
             {message_id++, simTime().dbl()},
             payload.c_str(),
@@ -112,9 +111,29 @@ namespace cmpn405_datalinklayer
             ack,
             piggyback_id);
 
+        if (sendQueue.front().first[0] == '1')
+        {
+            //Modify
+            int rand = uniform(0, 1) * payload.length();
+            EV << "rand is " << std::to_string(rand) << endl;
+            payload[rand] = payload[rand] + 5;
+            fmsg->setPayload(payload.c_str());
+        }
+        if (sendQueue.front().first[2] == '1')
+        {
+            //Duplicate
+            EV << "duplicated msg  " << fmsg->getHeader().first << endl;
+            send(fmsg, "pairPort$o");
+        }
+        if (sendQueue.front().first[3] == '1')
+        {
+            //Delay
+            sendDelayed(fmsg, 0.1, "pairPort$o", getIndex());
+        }
         sendQueue.pop();
-
-        send(fmsg, "pairPort$o");
+        //Loss
+        if (sendQueue.front().first[1] == '0')
+            send(fmsg, "pairPort$o");
     }
 
     void Node::receiveMessage(Frame_Base *fmsg)
