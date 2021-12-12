@@ -44,7 +44,7 @@ namespace cmpn405_datalinklayer
     {
         uint8_t rem = 0;
 
-        for (const uint8_t &byte : payload)
+        for (const uint8_t byte : payload)
         {
             rem ^= byte;
             for (int i = 0; i < 8; i++)
@@ -83,7 +83,7 @@ namespace cmpn405_datalinklayer
 
     void Node::openFile(const std::string &fileName)
     {
-        std::ifstream inFile("../input/" + fileName);
+        std::ifstream inFile(fileName);
 
         std::string line;
         while (!inFile.eof())
@@ -96,8 +96,11 @@ namespace cmpn405_datalinklayer
         }
     }
 
-    void Node::initialize() {}
-    void Node::sendMessage(bool ack = true, unsigned int piggyback_id = 0)
+    void Node::initialize()
+    {
+    }
+
+    void Node::sendMessage(bool ack = true, int piggyback_id = -1)
     {
         if (sendQueue.empty())
             return;
@@ -119,14 +122,36 @@ namespace cmpn405_datalinklayer
 
     void Node::receiveMessage(Frame_Base *fmsg)
     {
+        Header header = fmsg->getHeader();
+
+        if (header.first == -1)
+        {
+            EV << "I am node #" << getIndex() << '\n';
+            EV << "Got " << (fmsg->getAck() ? "ACK" : "NACK") << " on message_id " << fmsg->getPiggyback_id() << '\n';
+            return sendMessage();
+        }
+
         uint8_t crcByte = CRC(fmsg->getPayload(), fmsg->getTrailer());
         std::string message = DeFraming(fmsg->getPayload());
 
         EV << "I am node #" << getIndex() << '\n';
-        EV << "Got " << (fmsg->getAck() ? "ACK" : "NACK") << " on message_id " << fmsg->getPiggyback_id() << '\n';
-        EV << "Got message #" << fmsg->getHeader().first << " at time " << fmsg->getHeader().second << ": " << message << " -- with CRC: " << std::bitset<8>(crcByte) << '\n';
+        // EV << "Got " << (fmsg->getAck() ? "ACK" : "NACK") << " on message_id " << fmsg->getPiggyback_id() << '\n';
+        EV << "Got message #" << header.first << " at time " << header.second << ": " << message << " -- with CRC: " << std::bitset<8>(crcByte) << '\n';
 
-        sendMessage(!crcByte, fmsg->getHeader().first);
+        cancelAndDelete(fmsg);
+
+        // SEND (N)ACK ONLY --START
+        fmsg = new Frame_Base(
+            {-1, simTime().dbl()},
+            nullptr,
+            0,
+            !crcByte,
+            header.first);
+
+        sendDelayed(fmsg, 0.2, "pairPort$o");
+        // SEND (N)ACK ONLY --END
+
+        // sendMessage(!crcByte, header.first);
     }
 
     void Node::handleMessage(cMessage *msg)
@@ -137,17 +162,11 @@ namespace cmpn405_datalinklayer
             openFile(msg->getName());
             if (msg->getKind())
                 sendMessage();
-            return;
+            return cancelAndDelete(msg);
         }
 
         Frame_Base *fmsg = check_and_cast<Frame_Base *>(msg);
-
         receiveMessage(fmsg);
-
-        // send/receive logic
-        // CRC("Hello", 0b1001);
-
-        cancelAndDelete(msg);
     }
 
 }

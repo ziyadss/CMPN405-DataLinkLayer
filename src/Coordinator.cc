@@ -6,7 +6,8 @@ namespace cmpn405_datalinklayer
 
     void Coordinator::initialize()
     {
-        std::ifstream inFile("../input/coordinator_phase1.txt");
+        std::string fileNameBase = "../input-" + std::string(par("InputFolder").stringValue()) + "/";
+        std::ifstream inFile(fileNameBase + "coordinator.txt");
         std::string start_or_nodeID;
         inFile >> start_or_nodeID;
         while (!inFile.eof())
@@ -14,6 +15,7 @@ namespace cmpn405_datalinklayer
             std::string fileName;
             int nodeID = std::stoi(start_or_nodeID);
             inFile >> fileName >> start_or_nodeID;
+            fileName = fileNameBase + fileName;
             if (start_or_nodeID == "start")
             {
                 int startTime;

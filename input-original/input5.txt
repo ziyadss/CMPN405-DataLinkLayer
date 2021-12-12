@@ -1,0 +1,8 @@
+0010 $An aurora, also known as the polar lights$ or aurora polaris,
+0000 is a natural light display in Earth's sky,
+0010 predominantly seen in high-latitude regions
+1010 (around the Arctic/ and Antarctic).
+0000 Auroras display dynamic patterns of brilliant lights/
+0000 that appear as curtains,
+0000 rays, spirals$
+1100 or dynamic flickers covering the entire sky$

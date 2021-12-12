@@ -200,7 +200,7 @@ Frame_Base::~Frame_Base()
 {
 }
 
-Frame_Base::Frame_Base(const Header &header, const char *payload, char trailer, bool ack, unsigned int piggyback_id) : ::omnetpp::cPacket(nullptr, 0)
+Frame_Base::Frame_Base(const Header &header, const char *payload, char trailer, bool ack, int piggyback_id) : ::omnetpp::cPacket(nullptr, 0)
 {
     this->header = header;
     this->payload = payload;
@@ -287,15 +287,22 @@ void Frame_Base::setAck(bool ack)
     this->ack = ack;
 }
 
-unsigned int Frame_Base::getPiggyback_id() const
+int Frame_Base::getPiggyback_id() const
 {
     return this->piggyback_id;
 }
 
-void Frame_Base::setPiggyback_id(unsigned int piggyback_id)
+void Frame_Base::setPiggyback_id(int piggyback_id)
 {
     this->piggyback_id = piggyback_id;
 }
+
+// const char *Frame_Base::getDisplayString() const
+// {
+//     std::string ACK = this->getPiggyback_id() == -1 ? "NOPB" : ((this->getAck() ? "ACK " : "NACK ") + std::to_string(this->getPiggyback_id()));
+//     std::string displayString = std::to_string(this->header.first) + ", " + ACK;
+//     return displayString.c_str();
+// }
 
 class FrameDescriptor : public omnetpp::cClassDescriptor
 {
@@ -438,7 +445,7 @@ const char *FrameDescriptor::getFieldTypeString(int field) const
         "string",
         "char",
         "bool",
-        "unsigned int",
+        "int",
     };
     return (field >= 0 && field < 5) ? fieldTypeStrings[field] : nullptr;
 }
@@ -537,7 +544,7 @@ std::string FrameDescriptor::getFieldValueAsString(void *object, int field, int 
     case 3:
         return bool2string(pp->getAck());
     case 4:
-        return ulong2string(pp->getPiggyback_id());
+        return long2string(pp->getPiggyback_id());
     default:
         return "";
     }
@@ -566,7 +573,7 @@ bool FrameDescriptor::setFieldValueAsString(void *object, int field, int i, cons
         pp->setAck(string2bool(value));
         return true;
     case 4:
-        pp->setPiggyback_id(string2ulong(value));
+        pp->setPiggyback_id(string2long(value));
         return true;
     default:
         return false;

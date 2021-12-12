@@ -1,0 +1,5 @@
+0001 A cherry blossom is a flower of many trees of genus$ Prunus or Prunus subg.
+0011 They are also known as Japanese cherry and Sakura
+0000 They generally refer to $ ornamental cherry trees,
+0000 not to be confused with cherry trees that/ produce fruit for eating.
+1000 It is considered/ the national flower of Japan.
