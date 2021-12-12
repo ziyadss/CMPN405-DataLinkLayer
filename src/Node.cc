@@ -114,7 +114,7 @@ namespace cmpn405_datalinklayer
             ack,
             piggyback_id);
 
-        if (sendQueue.front().first[0] == '1')
+        if (errors[0] == '1')
         {
             //Modify
             int rand = uniform(0, 1) * payload.length();
@@ -122,21 +122,29 @@ namespace cmpn405_datalinklayer
             payload[rand] = payload[rand] + 5;
             fmsg->setPayload(payload.c_str());
         }
-        if (sendQueue.front().first[2] == '1')
+        if (errors[1] == '1')
         {
             //Duplicate
             EV << "duplicated msg  " << fmsg->getHeader().first << endl;
-            send(fmsg, "pairPort$o");
+            auto dupMsg = fmsg->dup();
+            sendDelayed(dupMsg, 0.01, "pairPort$o");
         }
-        if (sendQueue.front().first[3] == '1')
-        {
-            //Delay
-            sendDelayed(fmsg, 0.1, "pairPort$o", getIndex());
-        }
-        sendQueue.pop();
+        double delay = 0;
+
+        //Delay
+        if (errors[2] == '1')
+            delay = par("Delay").intValue();
+
         //Loss
-        if (sendQueue.front().first[1] == '0')
-            send(fmsg, "pairPort$o");
+        if (errors[3] == '0')
+            sendDelayed(fmsg, delay, "pairPort$o");
+        else
+        {
+            cancelAndDelete(fmsg);
+            EV << "Lost msg\n";
+        }
+
+        sendQueue.pop();
     }
 
     void Node::receiveMessage(Frame_Base *fmsg)
@@ -147,6 +155,7 @@ namespace cmpn405_datalinklayer
         {
             EV << "I am node #" << getIndex() << '\n';
             EV << "Got " << (fmsg->getAck() ? "ACK" : "NACK") << " on message_id " << fmsg->getPiggyback_id() << '\n';
+            cancelAndDelete(fmsg);
             return sendMessage();
         }
 
