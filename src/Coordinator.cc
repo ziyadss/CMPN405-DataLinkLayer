@@ -6,7 +6,7 @@ namespace cmpn405_datalinklayer
 
     void Coordinator::initialize()
     {
-        std::ifstream inFile("../input/coordinator.txt");
+        std::ifstream inFile("../input/coordinator_phase1.txt");
         std::string start_or_nodeID;
         inFile >> start_or_nodeID;
         while (!inFile.eof())
@@ -19,7 +19,7 @@ namespace cmpn405_datalinklayer
                 int startTime;
                 inFile >> startTime;
                 // Start 'nodeID' with file 'fileName' at time 'startTime'
-                cMessage *msg = new cMessage(fileName.c_str());
+                cMessage *msg = new cMessage(fileName.c_str(), true);
                 sendDelayed(msg, startTime, "nodeInitPort", nodeID);
                 EV << "Node " << nodeID << " with file " << fileName << " at time " << startTime << std::endl;
                 inFile >> start_or_nodeID;
@@ -27,7 +27,7 @@ namespace cmpn405_datalinklayer
             else
             {
                 // 'nodeID' does not send first
-                cMessage *msg = new cMessage(fileName.c_str());
+                cMessage *msg = new cMessage(fileName.c_str(), false);
                 send(msg, "nodeInitPort", nodeID);
                 EV << "Node " << nodeID << " with file " << fileName << std::endl;
             }
