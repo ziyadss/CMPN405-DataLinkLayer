@@ -129,6 +129,38 @@ namespace cmpn405_datalinklayer
         outFile<<result<<endl;
     }
 
+
+    void Node::calcResults(double totalTime){
+        std::ofstream outFile;
+        std::string filename;
+        if(getIndex()==0 || getIndex()==1){
+            filename="pair01.txt";
+        }else if(getIndex()==2||getIndex()==3){
+            filename="pair23.txt";
+        }else{
+            filename="pair45.txt";
+        }
+        outFile.open(filename,std::fstream::app);
+        if(!outFile){
+            EV << "Error in opening output file"<<endl;
+        }
+        outFile<<"- '''''''''''' "<<endl;
+        if(getIndex()==0 || getIndex()==1){
+            outFile<<"- node 0 end of input file"<<endl;
+            outFile<<"- node 1 end of input file"<<endl;
+        }else if(getIndex()==2||getIndex()==3){
+            outFile<<"- node 2 end of input file"<<endl;
+            outFile<<"- node 3 end of input file"<<endl;
+        }else{
+            outFile<<"- node 4 end of input file"<<endl;
+            outFile<<"- node 5 end of input file"<<endl;
+        }
+        outFile<<"- total transmission time= "<<totalTime<<endl;
+        outFile<<"- total number of transmissions= "<<this->transNum<<endl;
+        outFile<<"- the newtwork throughput= "<< this->correctNum / totalTime <<endl;
+        outFile.close();
+    }
+
     void Node::openFile(const std::string &fileName)
     {
         std::ifstream inFile(fileName);
@@ -150,8 +182,10 @@ namespace cmpn405_datalinklayer
 
     void Node::sendMessage(bool ack = true, int piggyback_id = -1)
     {
-        if (sendQueue.empty())
+        if (sendQueue.empty()){
+            calcResults(simTime().dbl());
             return;
+        }
 
         std::string errors = sendQueue.front().first;
         std::string payload = Framing(sendQueue.front().second);
@@ -161,6 +195,10 @@ namespace cmpn405_datalinklayer
             CRC(payload),
             ack,
             piggyback_id);
+
+        if(errors[0]=='0' && errors[1]=='0'&& errors[2]=='0'&& errors[3]=='0'){
+            this->correctNum++;
+        }
 
         if (errors[0] == '1')
         {
@@ -185,14 +223,18 @@ namespace cmpn405_datalinklayer
             delay = par("Delay").intValue();
 
         //Loss
-        if (errors[3] == '0')
+        if (errors[3] == '0'){
+
+            this->transNum++;
             sendDelayed(fmsg, delay, "pairPort$o");
+        }
         else
         {
             type=2;
             cancelAndDelete(fmsg);
             EV << "Lost msg\n";
         }
+        
 
         this->writetoFile(type,ack,piggyback_id);
 
