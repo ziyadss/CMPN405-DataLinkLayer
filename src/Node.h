@@ -20,6 +20,7 @@ namespace cmpn405_datalinklayer
     void receiveMessage(Frame_Base *fmsg);
 
     void openFile(const std::string &fileName);
+    void writetoFile(int type,bool ack,int ackNum);
 
     static std::string Framing(std::string msg);
     static std::string DeFraming(std::string msg);
