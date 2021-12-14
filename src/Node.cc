@@ -4,7 +4,7 @@ namespace cmpn405_datalinklayer
 {
     Define_Module(Node);
 
-    std::string Node::Framing(std::string msg)
+    std::string Node::Framing(const std::string &msg)
     {
         std::string payload("$");
 
@@ -20,7 +20,7 @@ namespace cmpn405_datalinklayer
         return payload;
     }
 
-    std::string Node::DeFraming(std::string msg)
+    std::string Node::DeFraming(const std::string &msg)
     {
         int i = 1;
         std::string payload;
@@ -40,7 +40,7 @@ namespace cmpn405_datalinklayer
         return payload;
     }
 
-    uint8_t Node::CRC(const std::string payload, const uint8_t crcByte = 0, const uint8_t generator = 0b10011001)
+    uint8_t Node::CRC(const std::string &payload, const uint8_t crcByte = 0, const uint8_t generator = 0b10011001)
     {
         uint8_t rem = 0;
 
@@ -59,26 +59,6 @@ namespace cmpn405_datalinklayer
         }
 
         return rem;
-    }
-
-    std::vector<std::bitset<8>> Node::toBits(const std::string &payload)
-    {
-        std::vector<std::bitset<8>> bits(payload.size());
-
-        for (int i = 0; i < payload.size(); i++)
-            bits[i] = std::bitset<8>(payload[i]);
-
-        return bits;
-    }
-
-    std::string Node::toBytes(const std::vector<std::bitset<8>> &bits)
-    {
-        std::string bytes(bits.size(), ' ');
-
-        for (int i = 0; i < bits.size(); i++)
-            bytes[i] = bits[i].to_ulong();
-
-        return bytes;
     }
 
     void Node::writetoFile(int type,bool ack,int ackNum)
@@ -161,6 +141,7 @@ namespace cmpn405_datalinklayer
         outFile.close();
     }
 
+
     void Node::openFile(const std::string &fileName)
     {
         std::ifstream inFile(fileName);
@@ -178,9 +159,12 @@ namespace cmpn405_datalinklayer
 
     void Node::initialize()
     {
+        timeout_message = new cMessage("Timeout!");
+        // TODO: free this at some point
+        //       also prevent timeouts sending after sender done so simulation ends
     }
 
-    void Node::sendMessage(bool ack = true, int piggyback_id = -1)
+    void Node::sendMessage(const bool ack = true, const int piggyback_id = -1)
     {
         if (sendQueue.empty()){
             calcResults(simTime().dbl());
@@ -190,7 +174,7 @@ namespace cmpn405_datalinklayer
         std::string errors = sendQueue.front().first;
         std::string payload = Framing(sendQueue.front().second);
         Frame_Base *fmsg = new Frame_Base(
-            {message_id++, simTime().dbl()},
+            {message_to_send++, (unsigned int)simTime().dbl()},
             payload.c_str(),
             CRC(payload),
             ack,
@@ -211,7 +195,7 @@ namespace cmpn405_datalinklayer
         if (errors[1] == '1')
         {
             //Duplicate
-            EV << "duplicated msg  " << fmsg->getHeader().first << endl;
+            EV << "duplicated msg  " << fmsg->getHeader().message_id << endl;
             auto dupMsg = fmsg->dup();
             sendDelayed(dupMsg, 0.01, "pairPort$o");
         }
@@ -243,9 +227,11 @@ namespace cmpn405_datalinklayer
 
     void Node::receiveMessage(Frame_Base *fmsg)
     {
-        Header header = fmsg->getHeader();
+        cancelEvent(timeout_message);
 
-        if (header.first == -1)
+        const Header header = fmsg->getHeader();
+
+        if (header.message_id == -1)
         {
             EV << "I am node #" << getIndex() << '\n';
             EV << "Got " << (fmsg->getAck() ? "ACK" : "NACK") << " on message_id " << fmsg->getPiggyback_id() << '\n';
@@ -253,33 +239,50 @@ namespace cmpn405_datalinklayer
             return sendMessage();
         }
 
-        uint8_t crcByte = CRC(fmsg->getPayload(), fmsg->getTrailer());
-        std::string message = DeFraming(fmsg->getPayload());
+        const uint8_t crcByte = CRC(fmsg->getPayload(), fmsg->getTrailer());
+        const std::string message = DeFraming(fmsg->getPayload());
 
         EV << "I am node #" << getIndex() << '\n';
         // EV << "Got " << (fmsg->getAck() ? "ACK" : "NACK") << " on message_id " << fmsg->getPiggyback_id() << '\n';
-        EV << "Got message #" << header.first << " at time " << header.second << ": " << message << " -- with CRC: " << std::bitset<8>(crcByte) << '\n';
+        EV << "Got message #" << header.message_id << " at time " << header.timestamp << ": " << message << " -- with CRC: " << std::bitset<8>(crcByte) << '\n';
 
         cancelAndDelete(fmsg);
 
         // SEND (N)ACK ONLY --START
+        const bool ack = !crcByte && header.message_id == message_to_receive;
+        message_to_receive += ack;
         fmsg = new Frame_Base(
-            {-1, simTime().dbl()},
+            {-1, (unsigned int)simTime().dbl()},
             nullptr,
             0,
-            !crcByte,
-            header.first);
+            ack,
+            message_to_receive);
 
         sendDelayed(fmsg, 0.2, "pairPort$o");
         this->writetoFile(1,fmsg->getAck() ? true : false,fmsg->getPiggyback_id());
         // SEND (N)ACK ONLY --END
 
-        // sendMessage(!crcByte, header.first);
+        // sendMessage(ack, header.message_id);
+        scheduleAt(simTime() + par("Timeout").intValue(), timeout_message);
     }
 
     void Node::handleMessage(cMessage *msg)
     {
-        std::string inputPort = msg->getArrivalGate()->getName();
+        if (msg->isSelfMessage())
+        {
+            EV << "Timeout!\n";
+            Frame_Base *fmsg = new Frame_Base(
+                {-1, (unsigned int)simTime().dbl()},
+                nullptr,
+                0,
+                0,
+                message_to_receive);
+
+            send(fmsg, "pairPort$o");
+            return scheduleAt(simTime() + par("Timeout").intValue(), timeout_message);
+        }
+
+        const std::string inputPort = msg->getArrivalGate()->getName();
         if (inputPort == "initPort")
         {
             openFile(msg->getName());
