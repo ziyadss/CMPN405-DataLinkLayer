@@ -97,8 +97,9 @@ namespace cmpn405_datalinklayer
             ack,
             piggyback_id);
 
-        if (errors[0] == '0' && errors[1] == '0' && errors[2] == '0' && errors[3] == '0')
-            this->correctNum++;
+        transNum++;
+        int type = 0;
+        double delay = 0;
 
         if (errors[0] == '1')
         {
@@ -111,24 +112,20 @@ namespace cmpn405_datalinklayer
         if (errors[1] == '1')
         {
             //Duplicate
+            transNum++;
             EV << "duplicated msg  " << fmsg->getHeader().message_id << endl;
             auto dupMsg = fmsg->dup();
             sendDelayed(dupMsg, 0.01, "pairPort$o");
+            writeToFile(type, ack, piggyback_id, message_to_send - 1);
         }
-        int type = 0;
-        double delay = 0;
 
         //Delay
         if (errors[2] == '1')
-            delay = par("Delay").intValue();
+            delay = par("Delay").doubleValue();
 
         //Loss
         if (errors[3] == '0')
-        {
-
-            this->transNum++;
             sendDelayed(fmsg, delay, "pairPort$o");
-        }
         else
         {
             type = 2;
@@ -136,7 +133,7 @@ namespace cmpn405_datalinklayer
             EV << "Lost msg\n";
         }
 
-        this->writetoFile(type, ack, piggyback_id);
+        writeToFile(type, ack, piggyback_id, message_to_send - 1);
 
         sendQueue.pop();
     }
@@ -161,6 +158,7 @@ namespace cmpn405_datalinklayer
 
             EV << "I am node #" << getIndex() << '\n';
             EV << "Got " << (fmsg->getAck() ? "ACK" : "NACK") << " on message_id " << fmsg->getPiggyback_id() << '\n';
+            correctNum += fmsg->getAck();
             cancelAndDelete(fmsg);
             return sendMessage();
         }
@@ -187,14 +185,15 @@ namespace cmpn405_datalinklayer
             message_to_receive);
 
         sendDelayed(fmsg, 0.2, "pairPort$o");
-        this->writetoFile(1, fmsg->getAck() ? true : false, fmsg->getPiggyback_id());
+        writeToFile(1, ack, message_to_receive, header.message_id);
         // SEND (N)ACK ONLY --END
 
         // sendMessage(ack, header.message_id);
-        scheduleAt(simTime() + par("Timeout").intValue(), timeout_message);
+        if (timeout_message)
+            scheduleAt(simTime() + par("Timeout").doubleValue(), timeout_message);
     }
 
-    void Node::writetoFile(int type, bool ack, int ackNum)
+    void Node::writeToFile(int type, bool ack, int ackNum, int msg_id)
     {
         std::ofstream outFile;
         std::string filename;
@@ -213,15 +212,14 @@ namespace cmpn405_datalinklayer
 
         // types 0-send 1-recieve 2-drop 3-timeout
         if (type == 0)
-            result += " sends message with id=";
+            result += " sends message with id=" + std::to_string(msg_id);
         else if (type == 1)
-            result += " received message with id=";
+            result += " received message with id=" + std::to_string(msg_id);
         else if (type == 2)
-            result += " drops message with id=";
+            result += " drops message with id=" + std::to_string(msg_id);
         else
-            result += " timeout for message id=";
+            result += " timeout for message id=" + std::to_string(msg_id);
 
-        result += std::to_string(message_to_send);
         if (type == 0)
             result = result + " and content= " + sendQueue.front().second;
         else if (type == 1)
@@ -277,8 +275,8 @@ namespace cmpn405_datalinklayer
             outFile << "- node 5 end of input file" << endl;
         }
         outFile << "- total transmission time= " << totalTime << endl;
-        outFile << "- total number of transmissions= " << this->transNum << endl;
-        outFile << "- the network throughput= " << this->correctNum / totalTime << endl;
+        outFile << "- total number of transmissions= " << transNum << endl;
+        outFile << "- the network throughput= " << correctNum / totalTime << endl;
         outFile.close();
     }
 
@@ -300,7 +298,7 @@ namespace cmpn405_datalinklayer
                 message_to_receive);
 
             send(fmsg, "pairPort$o");
-            return scheduleAt(simTime() + par("Timeout").intValue(), timeout_message);
+            return scheduleAt(simTime() + par("Timeout").doubleValue(), timeout_message);
         }
 
         const std::string inputPort = msg->getArrivalGate()->getName();
