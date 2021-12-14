@@ -61,86 +61,116 @@ namespace cmpn405_datalinklayer
         return rem;
     }
 
-    void Node::writetoFile(int type,bool ack,int ackNum)
+    void Node::writetoFile(int type, bool ack, int ackNum)
     {
         std::ofstream outFile;
         std::string filename;
-        if(getIndex()==0 || getIndex()==1){
-            filename="pair01.txt";
-        }else if(getIndex()==2||getIndex()==3){
-            filename="pair23.txt";
-        }else{
-            filename="pair45.txt";
+        if (getIndex() == 0 || getIndex() == 1)
+        {
+            filename = "pair01.txt";
         }
-        outFile.open(filename,std::fstream::app);
-        if(!outFile){
-            EV << "Error in opening output file"<<endl;
+        else if (getIndex() == 2 || getIndex() == 3)
+        {
+            filename = "pair23.txt";
         }
-        std::string result="- node "+std::to_string(getIndex());
+        else
+        {
+            filename = "pair45.txt";
+        }
+        outFile.open(filename, std::fstream::app);
+        if (!outFile)
+        {
+            EV << "Error in opening output file" << endl;
+        }
+        std::string result = "- node " + std::to_string(getIndex());
         // types 0-send 1-recieve 2-drop 3-timeout
-        if(type==0){
-            result+=" sends message with id=";
-        }else if(type==1){
-            result+=" received message with id=";
-        }else if(type==2){
-            result+=" drops message with id=";
-        }else{
-            result+=" timeout for message id=";
+        if (type == 0)
+        {
+            result += " sends message with id=";
+        }
+        else if (type == 1)
+        {
+            result += " received message with id=";
+        }
+        else if (type == 2)
+        {
+            result += " drops message with id=";
+        }
+        else
+        {
+            result += " timeout for message id=";
         }
 
-        result+=std::to_string(message_id);
-        if(type==0 || type==1){
-            result=result+" and content= "+sendQueue.front().second;
-                
+        result += std::to_string(message_to_send);
+        if (type == 0)
+        {
+            result = result + " and content= " + sendQueue.front().second;
         }
-        if(type!=2){
+        else if (type == 1)
+            result = result + " and content= " + receiveStack.top();
+        if (type != 2)
+        {
 
-            result=result+" at "+std::to_string(simTime().dbl());
+            result = result + " at " + std::to_string(simTime().dbl());
         }
-        if(ack && (type==0 || type==1)){
+        if (ack && (type == 0 || type == 1))
+        {
             std::string errors = sendQueue.front().first;
-            if(errors[0]=='1'){
-                result+=" with modification ";
+            if (errors[0] == '1')
+            {
+                result += " with modification ";
             }
-            result=result+"and piggybacking Ack number "+std::to_string(ackNum);
-        }else if((type==0 || type==1)){
-            result=result+" and NACK number "+std::to_string(ackNum);
+            result = result + "and piggybacking Ack number " + std::to_string(ackNum);
         }
-        outFile<<result<<endl;
+        else if ((type == 0 || type == 1))
+        {
+            result = result + " and NACK number " + std::to_string(ackNum);
+        }
+        outFile << result << endl;
     }
 
-
-    void Node::calcResults(double totalTime){
+    void Node::calcResults(double totalTime)
+    {
         std::ofstream outFile;
         std::string filename;
-        if(getIndex()==0 || getIndex()==1){
-            filename="pair01.txt";
-        }else if(getIndex()==2||getIndex()==3){
-            filename="pair23.txt";
-        }else{
-            filename="pair45.txt";
+        if (getIndex() == 0 || getIndex() == 1)
+        {
+            filename = "pair01.txt";
         }
-        outFile.open(filename,std::fstream::app);
-        if(!outFile){
-            EV << "Error in opening output file"<<endl;
+        else if (getIndex() == 2 || getIndex() == 3)
+        {
+            filename = "pair23.txt";
         }
-        outFile<<"- '''''''''''' "<<endl;
-        if(getIndex()==0 || getIndex()==1){
-            outFile<<"- node 0 end of input file"<<endl;
-            outFile<<"- node 1 end of input file"<<endl;
-        }else if(getIndex()==2||getIndex()==3){
-            outFile<<"- node 2 end of input file"<<endl;
-            outFile<<"- node 3 end of input file"<<endl;
-        }else{
-            outFile<<"- node 4 end of input file"<<endl;
-            outFile<<"- node 5 end of input file"<<endl;
+        else
+        {
+            filename = "pair45.txt";
         }
-        outFile<<"- total transmission time= "<<totalTime<<endl;
-        outFile<<"- total number of transmissions= "<<this->transNum<<endl;
-        outFile<<"- the newtwork throughput= "<< this->correctNum / totalTime <<endl;
+        outFile.open(filename, std::fstream::app);
+        if (!outFile)
+        {
+            EV << "Error in opening output file" << endl;
+        }
+        outFile << "- '''''''''''' " << endl;
+        if (getIndex() == 0 || getIndex() == 1)
+        {
+            outFile << "- node 0 end of input file" << endl;
+            outFile << "- node 1 end of input file" << endl;
+        }
+        else if (getIndex() == 2 || getIndex() == 3)
+        {
+            outFile << "- node 2 end of input file" << endl;
+            outFile << "- node 3 end of input file" << endl;
+        }
+        else
+        {
+            outFile << "- node 4 end of input file" << endl;
+            outFile << "- node 5 end of input file" << endl;
+        }
+        outFile << "- total transmission time= " << totalTime << endl;
+        outFile << "- total number of transmissions= " << this->transNum << endl;
+        outFile << "- the network throughput= " << this->correctNum / totalTime << endl;
         outFile.close();
     }
-
 
     void Node::openFile(const std::string &fileName)
     {
@@ -160,13 +190,19 @@ namespace cmpn405_datalinklayer
     void Node::initialize()
     {
         timeout_message = new cMessage("Timeout!");
-        // TODO: free this at some point
-        //       also prevent timeouts sending after sender done so simulation ends
     }
 
     void Node::sendMessage(const bool ack = true, const int piggyback_id = -1)
     {
-        if (sendQueue.empty()){
+        if (sendQueue.empty())
+        {
+            Frame_Base *fmsg = new Frame_Base(
+                {-1, (unsigned int)simTime().dbl()},
+                nullptr,
+                0,
+                0,
+                -1);
+            send(fmsg, "pairPort$o");
             calcResults(simTime().dbl());
             return;
         }
@@ -180,7 +216,8 @@ namespace cmpn405_datalinklayer
             ack,
             piggyback_id);
 
-        if(errors[0]=='0' && errors[1]=='0'&& errors[2]=='0'&& errors[3]=='0'){
+        if (errors[0] == '0' && errors[1] == '0' && errors[2] == '0' && errors[3] == '0')
+        {
             this->correctNum++;
         }
 
@@ -199,7 +236,7 @@ namespace cmpn405_datalinklayer
             auto dupMsg = fmsg->dup();
             sendDelayed(dupMsg, 0.01, "pairPort$o");
         }
-        int type=0;
+        int type = 0;
         double delay = 0;
 
         //Delay
@@ -207,32 +244,42 @@ namespace cmpn405_datalinklayer
             delay = par("Delay").intValue();
 
         //Loss
-        if (errors[3] == '0'){
+        if (errors[3] == '0')
+        {
 
             this->transNum++;
             sendDelayed(fmsg, delay, "pairPort$o");
         }
         else
         {
-            type=2;
+            type = 2;
             cancelAndDelete(fmsg);
             EV << "Lost msg\n";
         }
-        
 
-        this->writetoFile(type,ack,piggyback_id);
+        this->writetoFile(type, ack, piggyback_id);
 
         sendQueue.pop();
     }
 
     void Node::receiveMessage(Frame_Base *fmsg)
     {
-        cancelEvent(timeout_message);
+        if (timeout_message)
+            cancelEvent(timeout_message);
 
         const Header header = fmsg->getHeader();
 
         if (header.message_id == -1)
         {
+            if (timeout_message)
+            {
+                delete timeout_message;
+                timeout_message = nullptr;
+            }
+
+            if (fmsg->getPiggyback_id() == -1)
+                return;
+
             EV << "I am node #" << getIndex() << '\n';
             EV << "Got " << (fmsg->getAck() ? "ACK" : "NACK") << " on message_id " << fmsg->getPiggyback_id() << '\n';
             cancelAndDelete(fmsg);
@@ -245,6 +292,8 @@ namespace cmpn405_datalinklayer
         EV << "I am node #" << getIndex() << '\n';
         // EV << "Got " << (fmsg->getAck() ? "ACK" : "NACK") << " on message_id " << fmsg->getPiggyback_id() << '\n';
         EV << "Got message #" << header.message_id << " at time " << header.timestamp << ": " << message << " -- with CRC: " << std::bitset<8>(crcByte) << '\n';
+
+        receiveStack.push(message);
 
         cancelAndDelete(fmsg);
 
@@ -259,7 +308,7 @@ namespace cmpn405_datalinklayer
             message_to_receive);
 
         sendDelayed(fmsg, 0.2, "pairPort$o");
-        this->writetoFile(1,fmsg->getAck() ? true : false,fmsg->getPiggyback_id());
+        this->writetoFile(1, fmsg->getAck() ? true : false, fmsg->getPiggyback_id());
         // SEND (N)ACK ONLY --END
 
         // sendMessage(ack, header.message_id);
@@ -287,7 +336,10 @@ namespace cmpn405_datalinklayer
         {
             openFile(msg->getName());
             if (msg->getKind())
+            {
+                // openFile(msg->getName());
                 sendMessage();
+            }
             return cancelAndDelete(msg);
         }
 
