@@ -22,7 +22,7 @@ namespace cmpn405_datalinklayer
     void sendMessage(const bool ack, const int piggyback_id);
     void receiveMessage(Frame_Base *fmsg);
 
-    void writetoFile(int type, bool ack, int ackNum);
+    void writeToFile(int type, bool ack, int ackNum, int msg_id);
     void calcResults(double totalTime);
 
     std::queue<std::pair<std::string, std::string>> sendQueue;
