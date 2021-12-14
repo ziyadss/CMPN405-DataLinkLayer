@@ -10,6 +10,11 @@ namespace cmpn405_datalinklayer
         std::ifstream inFile(fileNameBase + "coordinator.txt");
         std::string start_or_nodeID;
         inFile >> start_or_nodeID;
+        //remove all the output files
+        remove( "pair01.txt" );
+        remove( "pair23.txt" );
+        remove( "pair45.txt" );
+
         while (!inFile.eof())
         {
             std::string fileName;
