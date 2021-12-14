@@ -16,4 +16,4 @@
 - node 1 end of input file
 - total transmission time= 11
 - total number of transmissions= 6
-- the newtwork throughput= 0.454545
+- the network throughput= 0.454545
