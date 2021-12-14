@@ -4,16 +4,17 @@
 - node 1 received message with id=0 and content= is the reproductive$ structure found in flowering plants at 5.200000 and NACK number 0
 - node 0 sends message with id=3 and content= (plants of the division Magnoliophyta, also called/ angiosperms$). at 5.400000and piggybacking Ack number -1
 - node 1 received message with id=0 and content= (plants of the division Magnoliophyta, also called/ angiosperms$). at 5.400000 and NACK number 0
+- node 1 received message with id=0 and content= (plants of the division Magnoliophyta, also called/ angiosperms$). at 5.410000 and NACK number 0
 - node 0 sends message with id=4 and content= The biological function of a flower is to facilitate reproduction, at 5.600000and piggybacking Ack number -1
 - node 1 received message with id=0 and content= The biological function of a flower is to facilitate reproduction, at 5.600000 and NACK number 0
 - node 0 drops message with id=5
-- node 0 sends message with id=6 and content= Flowers may facilitate outcrossing$ at 10.600000and piggybacking Ack number -1
-- node 1 received message with id=0 and content= Flowers may facilitate outcrossing$ at 10.600000 and NACK number 0
-- node 0 sends message with id=7 and content= (fusion of sperm and eggs from different individuals in a population) at 10.800000and piggybacking Ack number -1
-- node 1 received message with id=0 and content= (fusion of sperm and eggs from different individuals in a population) at 10.800000 and NACK number 0
+- node 0 sends message with id=6 and content= Flowers may facilitate outcrossing$ at 5.800000and piggybacking Ack number -1
+- node 1 received message with id=0 and content= Flowers may facilitate outcrossing$ at 5.800000 and NACK number 0
+- node 0 sends message with id=7 and content= (fusion of sperm and eggs from different individuals in a population) at 6.000000and piggybacking Ack number -1
+- node 1 received message with id=0 and content= (fusion of sperm and eggs from different individuals in a population) at 6.000000 and NACK number 0
 - '''''''''''' 
 - node 0 end of input file
 - node 1 end of input file
-- total transmission time= 11
+- total transmission time= 6.2
 - total number of transmissions= 6
-- the network throughput= 0.454545
+- the network throughput= 0.645161
