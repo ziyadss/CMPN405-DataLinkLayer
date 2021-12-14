@@ -129,10 +129,9 @@ namespace cmpn405_datalinklayer
 
     void Node::receiveMessage(Frame_Base *fmsg)
     {
-        if (timeout_message)
-            cancelEvent(timeout_message);
+        cancelEvent(&timeout_message);
 
-        Header header = fmsg->getHeader();
+        const Header header = fmsg->getHeader();
 
         if (header.message_id == -1)
         {
@@ -142,8 +141,8 @@ namespace cmpn405_datalinklayer
             return sendMessage();
         }
 
-        uint8_t crcByte = CRC(fmsg->getPayload(), fmsg->getTrailer());
-        std::string message = DeFraming(fmsg->getPayload());
+        const uint8_t crcByte = CRC(fmsg->getPayload(), fmsg->getTrailer());
+        const std::string message = DeFraming(fmsg->getPayload());
 
         EV << "I am node #" << getIndex() << '\n';
         // EV << "Got " << (fmsg->getAck() ? "ACK" : "NACK") << " on message_id " << fmsg->getPiggyback_id() << '\n';
@@ -152,7 +151,7 @@ namespace cmpn405_datalinklayer
         cancelAndDelete(fmsg);
 
         // SEND (N)ACK ONLY --START
-        bool ack = !crcByte && header.message_id == message_to_receive;
+        const bool ack = !crcByte && header.message_id == message_to_receive;
         message_to_receive += ack;
         fmsg = new Frame_Base(
             {-1, (unsigned int)simTime().dbl()},
@@ -165,8 +164,7 @@ namespace cmpn405_datalinklayer
         // SEND (N)ACK ONLY --END
 
         // sendMessage(ack, header.message_id);
-        timeout_message = new cMessage("Timeout!");
-        scheduleAt(simTime() + par("Timeout").intValue(), timeout_message);
+        scheduleAt(simTime() + par("Timeout").intValue(), &timeout_message);
     }
 
     void Node::handleMessage(cMessage *msg)
@@ -182,9 +180,10 @@ namespace cmpn405_datalinklayer
                 message_to_receive);
 
             send(fmsg, "pairPort$o");
+            scheduleAt(simTime() + par("Timeout").intValue(), &timeout_message);
         }
 
-        std::string inputPort = msg->getArrivalGate()->getName();
+        const std::string inputPort = msg->getArrivalGate()->getName();
         if (inputPort == "initPort")
         {
             openFile(msg->getName());
