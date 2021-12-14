@@ -108,7 +108,7 @@ namespace cmpn405_datalinklayer
         std::string errors = sendQueue.front().first;
         std::string payload = Framing(sendQueue.front().second);
         Frame_Base *fmsg = new Frame_Base(
-            {message_id++, (unsigned int) simTime().dbl()},
+            {message_to_send++, (unsigned int)simTime().dbl()},
             payload.c_str(),
             CRC(payload),
             ack,
@@ -149,6 +149,9 @@ namespace cmpn405_datalinklayer
 
     void Node::receiveMessage(Frame_Base *fmsg)
     {
+        if (timeout_message)
+            cancelEvent(timeout_message);
+
         Header header = fmsg->getHeader();
 
         if (header.message_id == -1)
@@ -169,21 +172,38 @@ namespace cmpn405_datalinklayer
         cancelAndDelete(fmsg);
 
         // SEND (N)ACK ONLY --START
+        bool ack = !crcByte && header.message_id == message_to_receive;
+        message_to_receive += ack;
         fmsg = new Frame_Base(
-            {-1, (unsigned int) simTime().dbl()},
+            {-1, (unsigned int)simTime().dbl()},
             nullptr,
             0,
-            !crcByte,
-            header.message_id);
+            ack,
+            message_to_receive);
 
         sendDelayed(fmsg, 0.2, "pairPort$o");
         // SEND (N)ACK ONLY --END
 
-        // sendMessage(!crcByte, header.message_id);
+        // sendMessage(ack, header.message_id);
+        timeout_message = new cMessage("Timeout!");
+        scheduleAt(simTime() + par("Timeout").intValue(), timeout_message);
     }
 
     void Node::handleMessage(cMessage *msg)
     {
+        if (msg->isSelfMessage())
+        {
+            EV << "Timeout!\n";
+            Frame_Base *fmsg = new Frame_Base(
+                {-1, (unsigned int)simTime().dbl()},
+                nullptr,
+                0,
+                0,
+                message_to_receive);
+
+            send(fmsg, "pairPort$o");
+        }
+
         std::string inputPort = msg->getArrivalGate()->getName();
         if (inputPort == "initPort")
         {

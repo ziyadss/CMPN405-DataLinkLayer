@@ -28,7 +28,10 @@ namespace cmpn405_datalinklayer
     // std::vector<std::pair<int, std::string>> sendQueue;
     // std::vector<std::string> > receiveQueue;
 
-    int message_id = 0;
+    int message_to_send = 0;
+    int message_to_receive = 0;
+
+    cMessage *timeout_message = nullptr;
 
   protected:
     virtual void initialize();
