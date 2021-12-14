@@ -12,21 +12,21 @@ import cmpn405_datalinklayer.Node;
 network DataLinkLayer
 {
     parameters:
-        int pairs = default(3);
+        int Pairs = default(3);
         int WindowSize = default(1);
     submodules:
-        coordinator: Coordinator;
-        nodes[2*pairs]: Node;
+        Coordinator: Coordinator;
+        Nodes[2*Pairs]: Node;
         
     connections:
-        for i=0..sizeof(nodes)-1
+        for i=0..sizeof(Nodes)-1
         {
-            coordinator.nodeInitPort++ --> IdealChannel --> nodes[i].initPort; 
+            Coordinator.nodeInitPort++ --> IdealChannel --> Nodes[i].initPort; 
         }
         
-        for i=0..pairs-1
+        for i=0..Pairs-1
         {
-            nodes[2*i].pairPort <--> IdealChannel <--> nodes[2*i+1].pairPort;
+            Nodes[2*i].pairPort <--> IdealChannel <--> Nodes[2*i+1].pairPort;
         }
         
 }
