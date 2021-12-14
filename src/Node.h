@@ -20,6 +20,8 @@ namespace cmpn405_datalinklayer
     void receiveMessage(Frame_Base *fmsg);
 
     void openFile(const std::string &fileName);
+    void writetoFile(int type,bool ack,int ackNum);
+    void calcResults(double totalTime);
 
     static std::string Framing(std::string msg);
     static std::string DeFraming(std::string msg);
@@ -29,6 +31,8 @@ namespace cmpn405_datalinklayer
     // std::vector<std::string> > receiveQueue;
 
     unsigned int message_id = 0;
+    int transNum=0;
+    double correctNum=0;
 
   protected:
     virtual void initialize();
