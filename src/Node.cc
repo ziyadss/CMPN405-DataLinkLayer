@@ -78,6 +78,9 @@ namespace cmpn405_datalinklayer
 
     void Node::initialize()
     {
+        timeout_message = new cMessage("Timeout!");
+        // TODO: free this at some point
+        //       also prevent timeouts sending after sender done so simulation ends
     }
 
     void Node::sendMessage(const bool ack = true, const int piggyback_id = -1)
@@ -129,7 +132,7 @@ namespace cmpn405_datalinklayer
 
     void Node::receiveMessage(Frame_Base *fmsg)
     {
-        cancelEvent(&timeout_message);
+        cancelEvent(timeout_message);
 
         const Header header = fmsg->getHeader();
 
@@ -164,7 +167,7 @@ namespace cmpn405_datalinklayer
         // SEND (N)ACK ONLY --END
 
         // sendMessage(ack, header.message_id);
-        scheduleAt(simTime() + par("Timeout").intValue(), &timeout_message);
+        scheduleAt(simTime() + par("Timeout").intValue(), timeout_message);
     }
 
     void Node::handleMessage(cMessage *msg)
@@ -180,7 +183,7 @@ namespace cmpn405_datalinklayer
                 message_to_receive);
 
             send(fmsg, "pairPort$o");
-            scheduleAt(simTime() + par("Timeout").intValue(), &timeout_message);
+            return scheduleAt(simTime() + par("Timeout").intValue(), timeout_message);
         }
 
         const std::string inputPort = msg->getArrivalGate()->getName();

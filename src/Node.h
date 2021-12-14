@@ -28,7 +28,7 @@ namespace cmpn405_datalinklayer
     // std::vector<std::pair<int, std::string>> sendWindow;
     // std::vector<std::string> > receiveWindow;
 
-    cMessage timeout_message = cMessage("Timeout!");
+    cMessage *timeout_message;
 
   protected:
     virtual void initialize();
