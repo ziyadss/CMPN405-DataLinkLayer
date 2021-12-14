@@ -25,8 +25,8 @@ namespace cmpn405_datalinklayer
     static std::string DeFraming(std::string msg);
 
     std::queue<std::pair<std::string, std::string>> sendQueue;
-    // std::vector<std::pair<int, std::string>> sendQueue;
-    // std::vector<std::string> > receiveQueue;
+    // std::vector<std::pair<int, std::string>> sendWindow;
+    // std::vector<std::string> > receiveWindow;
 
     int message_to_send = 0;
     int message_to_receive = 0;
