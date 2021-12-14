@@ -17,12 +17,15 @@
 #endif
 
 // cplusplus {{
-typedef std::pair<int, unsigned int> Header;
-// first is MessageID, second is its timestamp
+typedef struct
+{
+  int message_id;
+  unsigned int timestamp;
+} Header;
 // }}
 
 /**
- * Class generated from <tt>Frame.msg:26</tt> by nedtool.
+ * Class generated from <tt>Frame.msg:28</tt> by nedtool.
  * <pre>
  * packet Frame
  * {

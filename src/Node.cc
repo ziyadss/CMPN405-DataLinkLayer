@@ -108,7 +108,7 @@ namespace cmpn405_datalinklayer
         std::string errors = sendQueue.front().first;
         std::string payload = Framing(sendQueue.front().second);
         Frame_Base *fmsg = new Frame_Base(
-            {message_id++, simTime().dbl()},
+            {message_id++, (unsigned int) simTime().dbl()},
             payload.c_str(),
             CRC(payload),
             ack,
@@ -125,7 +125,7 @@ namespace cmpn405_datalinklayer
         if (errors[1] == '1')
         {
             //Duplicate
-            EV << "duplicated msg  " << fmsg->getHeader().first << endl;
+            EV << "duplicated msg  " << fmsg->getHeader().message_id << endl;
             auto dupMsg = fmsg->dup();
             sendDelayed(dupMsg, 0.01, "pairPort$o");
         }
@@ -151,7 +151,7 @@ namespace cmpn405_datalinklayer
     {
         Header header = fmsg->getHeader();
 
-        if (header.first == -1)
+        if (header.message_id == -1)
         {
             EV << "I am node #" << getIndex() << '\n';
             EV << "Got " << (fmsg->getAck() ? "ACK" : "NACK") << " on message_id " << fmsg->getPiggyback_id() << '\n';
@@ -164,22 +164,22 @@ namespace cmpn405_datalinklayer
 
         EV << "I am node #" << getIndex() << '\n';
         // EV << "Got " << (fmsg->getAck() ? "ACK" : "NACK") << " on message_id " << fmsg->getPiggyback_id() << '\n';
-        EV << "Got message #" << header.first << " at time " << header.second << ": " << message << " -- with CRC: " << std::bitset<8>(crcByte) << '\n';
+        EV << "Got message #" << header.message_id << " at time " << header.timestamp << ": " << message << " -- with CRC: " << std::bitset<8>(crcByte) << '\n';
 
         cancelAndDelete(fmsg);
 
         // SEND (N)ACK ONLY --START
         fmsg = new Frame_Base(
-            {-1, simTime().dbl()},
+            {-1, (unsigned int) simTime().dbl()},
             nullptr,
             0,
             !crcByte,
-            header.first);
+            header.message_id);
 
         sendDelayed(fmsg, 0.2, "pairPort$o");
         // SEND (N)ACK ONLY --END
 
-        // sendMessage(!crcByte, header.first);
+        // sendMessage(!crcByte, header.message_id);
     }
 
     void Node::handleMessage(cMessage *msg)

@@ -17,8 +17,10 @@
 // TODO generated message class
 //
 cplusplus {{
-typedef std::pair<int, unsigned int> Header;
-// first is MessageID, second is its timestamp
+typedef struct {
+    int message_id;
+    unsigned int timestamp;
+} Header;
 }}
 
 class noncobject Header;

@@ -28,7 +28,7 @@ namespace cmpn405_datalinklayer
     // std::vector<std::pair<int, std::string>> sendQueue;
     // std::vector<std::string> > receiveQueue;
 
-    unsigned int message_id = 0;
+    int message_id = 0;
 
   protected:
     virtual void initialize();
