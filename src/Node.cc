@@ -4,7 +4,7 @@ namespace cmpn405_datalinklayer
 {
     Define_Module(Node);
 
-    std::string Node::Framing(std::string msg)
+    std::string Node::Framing(const std::string &msg)
     {
         std::string payload("$");
 
@@ -20,7 +20,7 @@ namespace cmpn405_datalinklayer
         return payload;
     }
 
-    std::string Node::DeFraming(std::string msg)
+    std::string Node::DeFraming(const std::string &msg)
     {
         int i = 1;
         std::string payload;
@@ -40,7 +40,7 @@ namespace cmpn405_datalinklayer
         return payload;
     }
 
-    uint8_t Node::CRC(const std::string payload, const uint8_t crcByte = 0, const uint8_t generator = 0b10011001)
+    uint8_t Node::CRC(const std::string &payload, const uint8_t crcByte = 0, const uint8_t generator = 0b10011001)
     {
         uint8_t rem = 0;
 
@@ -59,26 +59,6 @@ namespace cmpn405_datalinklayer
         }
 
         return rem;
-    }
-
-    std::vector<std::bitset<8>> Node::toBits(const std::string &payload)
-    {
-        std::vector<std::bitset<8>> bits(payload.size());
-
-        for (int i = 0; i < payload.size(); i++)
-            bits[i] = std::bitset<8>(payload[i]);
-
-        return bits;
-    }
-
-    std::string Node::toBytes(const std::vector<std::bitset<8>> &bits)
-    {
-        std::string bytes(bits.size(), ' ');
-
-        for (int i = 0; i < bits.size(); i++)
-            bytes[i] = bits[i].to_ulong();
-
-        return bytes;
     }
 
     void Node::openFile(const std::string &fileName)
@@ -100,7 +80,7 @@ namespace cmpn405_datalinklayer
     {
     }
 
-    void Node::sendMessage(bool ack = true, int piggyback_id = -1)
+    void Node::sendMessage(const bool ack = true, const int piggyback_id = -1)
     {
         if (sendQueue.empty())
             return;
