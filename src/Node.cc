@@ -81,8 +81,8 @@ namespace cmpn405_datalinklayer
                 {-1, (unsigned int)simTime().dbl()},
                 nullptr,
                 0,
-                0,
-                -1);
+                ack,
+                piggyback_id);
             send(fmsg, "pairPort$o");
             calcResults(simTime().dbl());
             return;
@@ -136,6 +136,7 @@ namespace cmpn405_datalinklayer
         writeToFile(type, ack, piggyback_id, message_to_send - 1);
 
         sendQueue.pop();
+        // pop on ACK in phase 2
     }
 
     void Node::receiveMessage(Frame_Base *fmsg)
@@ -154,7 +155,7 @@ namespace cmpn405_datalinklayer
             }
 
             if (fmsg->getPiggyback_id() == -1)
-                return;
+                return cancelAndDelete(fmsg);
 
             EV << "I am node #" << getIndex() << '\n';
             EV << "Got " << (fmsg->getAck() ? "ACK" : "NACK") << " on message_id " << fmsg->getPiggyback_id() << '\n';
