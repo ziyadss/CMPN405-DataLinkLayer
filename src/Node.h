@@ -17,7 +17,7 @@ namespace cmpn405_datalinklayer
 
     static std::string Framing(const std::string &msg);
     static std::string DeFraming(const std::string &msg);
-    static uint8_t CRC(const std::string &payload, const uint8_t crcByte, const uint8_t generator);
+    static uint8_t CRC(const std::string &payload, const uint8_t generator);
 
     void sendMessage(const bool ack, const int piggyback_id);
     void receiveMessage(Frame_Base *fmsg);

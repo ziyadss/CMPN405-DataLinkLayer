@@ -52,20 +52,13 @@ namespace cmpn405_datalinklayer
         return payload;
     }
 
-    uint8_t Node::CRC(const std::string &payload, const uint8_t crcByte = 0, const uint8_t generator = 0b10011001)
+    uint8_t Node::CRC(const std::string &payload, const uint8_t generator = 0b10011001)
     {
         uint8_t rem = 0;
 
         for (const uint8_t byte : payload)
         {
             rem ^= byte;
-            for (int i = 0; i < 8; i++)
-                rem = rem << 1 ^ (rem >> 7) * generator;
-        }
-
-        if (crcByte)
-        {
-            rem ^= crcByte;
             for (int i = 0; i < 8; i++)
                 rem = rem << 1 ^ (rem >> 7) * generator;
         }
@@ -104,17 +97,19 @@ namespace cmpn405_datalinklayer
         if (errors[0] == '1')
         {
             //Modify
-            int rand = uniform(0, 1) * payload.length();
-            EV << "rand is " << std::to_string(rand) << endl;
-            payload[rand] = payload[rand] + 5;
+            int rand = uniform(0, payload.length());
+            int bit = uniform(0, 8);
+            EV << "Modified byte " << rand << ", bit " << bit << endl;
+
+            payload[rand] ^= 1 << bit;
             fmsg->setPayload(payload.c_str());
         }
         if (errors[1] == '1')
         {
             //Duplicate
             transNum++;
-            EV << "duplicated msg  " << fmsg->getHeader().message_id << endl;
-            auto dupMsg = fmsg->dup();
+            EV << "Duplicated message " << fmsg->getHeader().message_id << std::endl;
+            Frame_Base *dupMsg = fmsg->dup();
             sendDelayed(dupMsg, 0.01, "pairPort$o");
             writeToFile(type, ack, piggyback_id, message_to_send - 1);
         }
@@ -129,8 +124,8 @@ namespace cmpn405_datalinklayer
         else
         {
             type = 2;
+            EV << "Lost message " << fmsg->getHeader().message_id << std::endl;
             cancelAndDelete(fmsg);
-            EV << "Lost msg\n";
         }
 
         writeToFile(type, ack, piggyback_id, message_to_send - 1);
@@ -164,7 +159,8 @@ namespace cmpn405_datalinklayer
             return sendMessage();
         }
 
-        const uint8_t crcByte = CRC(fmsg->getPayload(), fmsg->getTrailer());
+        std::string crcString = std::string(fmsg->getPayload()) + fmsg->getTrailer();
+        const uint8_t crcByte = CRC(crcString);
         const std::string message = DeFraming(fmsg->getPayload());
 
         EV << "I am node #" << getIndex() << '\n';
@@ -213,13 +209,15 @@ namespace cmpn405_datalinklayer
 
         // types 0-send 1-recieve 2-drop 3-timeout
         if (type == 0)
-            result += " sends message with id=" + std::to_string(msg_id);
+            result += " sends message with id=";
         else if (type == 1)
-            result += " received message with id=" + std::to_string(msg_id);
+            result += " received message with id=";
         else if (type == 2)
-            result += " drops message with id=" + std::to_string(msg_id);
+            result += " drops message with id=";
         else
-            result += " timeout for message id=" + std::to_string(msg_id);
+            result += " timeout for message id=";
+
+        result += std::to_string(msg_id);
 
         if (type == 0)
             result = result + " and content= " + sendQueue.front().second;
