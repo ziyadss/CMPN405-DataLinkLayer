@@ -77,7 +77,7 @@ namespace cmpn405_datalinklayer
                 ack,
                 piggyback_id);
             send(fmsg, "pairPort$o");
-            calcResults(simTime().dbl());
+            // calcResults(simTime().dbl());
             return;
         }
 
@@ -164,28 +164,19 @@ namespace cmpn405_datalinklayer
         const std::string message = DeFraming(fmsg->getPayload());
 
         EV << "I am node #" << getIndex() << '\n';
-        // EV << "Got " << (fmsg->getAck() ? "ACK" : "NACK") << " on message_id " << fmsg->getPiggyback_id() << '\n';
+        EV << "Got " << (fmsg->getAck() ? "ACK" : "NACK") << " on message_id " << fmsg->getPiggyback_id() << '\n';
         EV << "Got message #" << header.message_id << " at time " << header.timestamp << ": " << message << " -- with CRC: " << std::bitset<8>(crcByte) << '\n';
 
         receiveStack.push(message);
 
         cancelAndDelete(fmsg);
 
-        // SEND (N)ACK ONLY --START
         const bool ack = !crcByte && header.message_id == message_to_receive;
         message_to_receive += ack;
-        fmsg = new Frame_Base(
-            {-1, (unsigned int)simTime().dbl()},
-            nullptr,
-            0,
-            ack,
-            message_to_receive);
 
-        sendDelayed(fmsg, 0.2, "pairPort$o");
         writeToFile(1, ack, message_to_receive, header.message_id);
-        // SEND (N)ACK ONLY --END
+        sendMessage(ack, message_to_receive);
 
-        // sendMessage(ack, header.message_id);
         if (timeout_message)
             scheduleAt(simTime() + par("Timeout").doubleValue(), timeout_message);
     }
@@ -205,35 +196,35 @@ namespace cmpn405_datalinklayer
         if (!outFile)
             EV << "Error in opening output file" << endl;
 
-        std::string result = "- node " + std::to_string(getIndex());
+        std::string result = "- Node " + std::to_string(getIndex());
 
         // types 0-send 1-recieve 2-drop 3-timeout
         if (type == 0)
-            result += " sends message with id=";
+            result += " sends message with id = ";
         else if (type == 1)
-            result += " received message with id=";
+            result += " received message with id = ";
         else if (type == 2)
-            result += " drops message with id=";
+            result += " drops message with id = ";
         else
-            result += " timeout for message id=";
+            result += " timeout for message id = ";
 
         result += std::to_string(msg_id);
 
         if (type == 0)
-            result = result + " and content= " + sendQueue.front().second;
+            result = result + " and content = \"" + sendQueue.front().second + "\"";
         else if (type == 1)
-            result = result + " and content= " + receiveStack.top();
+            result = result + " and content = \"" + receiveStack.top() + "\"";
 
         if (type != 2)
             result = result + " at " + std::to_string(simTime().dbl());
 
         if (ack && (type == 0 || type == 1))
         {
-            std::string errors = sendQueue.front().first;
-            if (errors[0] == '1')
-                result += " with modification ";
+            // std::string errors = sendQueue.front().first;
+            // if (errors[0] == '1')
+            //     result += " with modification ";
 
-            result = result + "and piggybacking Ack number " + std::to_string(ackNum);
+            result = result + " and piggybacking Ack number " + std::to_string(ackNum);
         }
         else if (type == 0 || type == 1)
             result = result + " and NACK number " + std::to_string(ackNum);
