@@ -14,6 +14,7 @@ network DataLinkLayer
     parameters:
         int Pairs = default(3);
         int WindowSize = default(1);
+        string ErrorCorrection = default("crc");
     submodules:
         Coordinator: Coordinator;
         Nodes[2*Pairs]: Node;

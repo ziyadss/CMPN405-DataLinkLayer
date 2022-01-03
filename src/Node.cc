@@ -8,15 +8,17 @@ namespace cmpn405_datalinklayer
         std::ifstream inFile(fileName);
 
         std::string line;
+        int id = 0;
+
         while (!inFile.eof())
         {
-            std::string errorTemp, msgTemp;
             getline(inFile, line);
-            errorTemp = line.substr(0, 4);
-            msgTemp = line.substr(5, line.length());
-            sendQueue.push({errorTemp, msgTemp});
+            std::string error = line.substr(0, 4);
+            std::string payload = line.substr(5, line.length());
+            sendQueue.push({id++, error, payload, nullptr});
         }
     }
+
     std::string Node::Framing(const std::string &msg)
     {
         std::string payload("$");
@@ -66,7 +68,59 @@ namespace cmpn405_datalinklayer
         return rem;
     }
 
-    void Node::sendMessage(const bool ack = true, const int piggyback_id = -1)
+    void Node::sendMessage(const message_t &message, const bool ack = true, const int piggyback_id = -1)
+    {
+        std::string payload = Framing(message.payload);
+        Frame_Base *fmsg = new Frame_Base(
+            {message.id, (unsigned int)simTime().dbl()},
+            payload.c_str(),
+            CRC(payload),
+            ack,
+            piggyback_id);
+
+        transNum++;
+        int type = 0;
+        double delay = 0;
+
+        if (message.error[0] == '1')
+        {
+            //Modify
+            int rand = uniform(0, payload.length());
+            int bit = uniform(0, 8);
+            EV << "Modified byte " << rand << ", bit " << bit << endl;
+
+            payload[rand] ^= 1 << bit;
+            fmsg->setPayload(payload.c_str());
+        }
+        if (message.error[1] == '1')
+        {
+            //Duplicate
+            transNum++;
+            EV << "Duplicated message " << message.id << std::endl;
+            Frame_Base *dupMsg = fmsg->dup();
+            sendDelayed(dupMsg, 0.01, "pairPort$o");
+            writeToFile(type, ack, piggyback_id, message.id);
+        }
+
+        //Delay
+        if (message.error[2] == '1')
+            delay = par("Delay").doubleValue();
+
+        //Loss
+        if (message.error[3] == '0')
+            sendDelayed(fmsg, delay, "pairPort$o");
+        else
+        {
+            type = 2;
+            EV << "Lost message " << message.id << std::endl;
+            cancelAndDelete(fmsg);
+        }
+
+        writeToFile(type, ack, piggyback_id, message.id);
+        scheduleAt(simTime() + par("Timeout").doubleValue(), message.timeout_message);
+    }
+
+    void Node::sender(const bool ack = true, const int piggyback_id = -1)
     {
         if (sendQueue.empty())
         {
@@ -81,104 +135,80 @@ namespace cmpn405_datalinklayer
             return;
         }
 
-        std::string errors = sendQueue.front().first;
-        std::string payload = Framing(sendQueue.front().second);
-        Frame_Base *fmsg = new Frame_Base(
-            {message_to_send++, (unsigned int)simTime().dbl()},
-            payload.c_str(),
-            CRC(payload),
-            ack,
-            piggyback_id);
-
-        transNum++;
-        int type = 0;
-        double delay = 0;
-
-        if (errors[0] == '1')
+        // Move messages from sendQueue to sendWindow
+        while (sendWindow.size() < windowSize && sendQueue.size() > 0)
         {
-            //Modify
-            int rand = uniform(0, payload.length());
-            int bit = uniform(0, 8);
-            EV << "Modified byte " << rand << ", bit " << bit << endl;
+            auto message = sendQueue.front();
+            sendQueue.pop();
 
-            payload[rand] ^= 1 << bit;
-            fmsg->setPayload(payload.c_str());
+            // Prepare timeout timer and push the message to sendWindow
+            auto timeout_text = std::to_string(message.id);
+            message.timeout_message = new cMessage(timeout_text.c_str());
+            sendWindow.push_back(message);
+
+            sendMessage(message, ack, piggyback_id);
+            message.error = "0000";
         }
-        if (errors[1] == '1')
-        {
-            //Duplicate
-            transNum++;
-            EV << "Duplicated message " << fmsg->getHeader().message_id << std::endl;
-            Frame_Base *dupMsg = fmsg->dup();
-            sendDelayed(dupMsg, 0.01, "pairPort$o");
-            writeToFile(type, ack, piggyback_id, message_to_send - 1);
-        }
-
-        //Delay
-        if (errors[2] == '1')
-            delay = par("Delay").doubleValue();
-
-        //Loss
-        if (errors[3] == '0')
-            sendDelayed(fmsg, delay, "pairPort$o");
-        else
-        {
-            type = 2;
-            EV << "Lost message " << fmsg->getHeader().message_id << std::endl;
-            cancelAndDelete(fmsg);
-        }
-
-        writeToFile(type, ack, piggyback_id, message_to_send - 1);
-
-        sendQueue.pop();
-        // pop on ACK in phase 2
     }
 
-    void Node::receiveMessage(Frame_Base *fmsg)
+    void Node::receiver(Frame_Base *fmsg)
     {
-        if (timeout_message)
-            cancelEvent(timeout_message);
+
+        // if ACK, remove it from the sendWindow
+        // when I get ACK I do
+        // cancelEvent(message.timeout_message);
+        // delete message.timeout_message;
+        // message.timeout_message = nullptr;
+
+        /* 
+
+        fmsg->getHeader().message_id 
+            is -1 if no message, number if there is a message
+
+        fmsg->getPiggyback_id()
+            is -1 if no (n)ack, number if there is (n)ack
+        
+        */
+
+        EV << "I am node #" << getIndex() << '\n';
+        if (const int pb_id = fmsg->getPiggyback_id(); pb_id != -1)
+        {
+            const bool ack = fmsg->getAck();
+            EV << "Got " << (ack ? "ACK" : "NACK") << " on message id " << pb_id << '\n';
+            correctNum += ack;
+
+            while (ack && sendWindow.size() > 0 && sendWindow.front().id <= pb_id)
+                sendWindow.erase(sendWindow.begin());
+        }
 
         const Header header = fmsg->getHeader();
 
-        if (header.message_id == -1)
+        if (header.message_id != -1)
         {
-            if (timeout_message)
+            const std::string crcString = std::string(fmsg->getPayload()) + fmsg->getTrailer();
+            const uint8_t crcByte = CRC(crcString);
+            const std::string message = DeFraming(fmsg->getPayload());
+
+            EV << "Got message #" << header.message_id << " at time " << header.timestamp << ": " << message << " -- with CRC: " << std::bitset<8>(crcByte) << '\n';
+
+            bool ack = false;
+            if (!crcByte && header.message_id >= message_to_receive && header.message_id < message_to_receive + windowSize)
             {
-                delete timeout_message;
-                timeout_message = nullptr;
+                ack = true;
+                receiveBuffer.insert({header.message_id, message});
+            }
+            while (receiveBuffer.size() > 0 && receiveBuffer.begin()->first == message_to_receive)
+            {
+                message_to_receive++;
+                receiveStack.push(receiveBuffer.begin()->second);
+                receiveBuffer.erase(receiveBuffer.begin());
             }
 
-            if (fmsg->getPiggyback_id() == -1)
-                return cancelAndDelete(fmsg);
-
-            EV << "I am node #" << getIndex() << '\n';
-            EV << "Got " << (fmsg->getAck() ? "ACK" : "NACK") << " on message_id " << fmsg->getPiggyback_id() << '\n';
-            correctNum += fmsg->getAck();
-            cancelAndDelete(fmsg);
-            return sendMessage();
+            writeToFile(1, ack, message_to_receive, header.message_id);
+            sender(ack, message_to_receive);
         }
 
-        std::string crcString = std::string(fmsg->getPayload()) + fmsg->getTrailer();
-        const uint8_t crcByte = CRC(crcString);
-        const std::string message = DeFraming(fmsg->getPayload());
-
-        EV << "I am node #" << getIndex() << '\n';
-        EV << "Got " << (fmsg->getAck() ? "ACK" : "NACK") << " on message_id " << fmsg->getPiggyback_id() << '\n';
-        EV << "Got message #" << header.message_id << " at time " << header.timestamp << ": " << message << " -- with CRC: " << std::bitset<8>(crcByte) << '\n';
-
-        receiveStack.push(message);
-
         cancelAndDelete(fmsg);
-
-        const bool ack = !crcByte && header.message_id == message_to_receive;
-        message_to_receive += ack;
-
-        writeToFile(1, ack, message_to_receive, header.message_id);
-        sendMessage(ack, message_to_receive);
-
-        if (timeout_message)
-            scheduleAt(simTime() + par("Timeout").doubleValue(), timeout_message);
     }
 
     void Node::writeToFile(int type, bool ack, int ackNum, int msg_id)
@@ -210,10 +240,10 @@ namespace cmpn405_datalinklayer
 
         result += std::to_string(msg_id);
 
-        if (type == 0)
-            result = result + " and content = \"" + sendQueue.front().second + "\"";
-        else if (type == 1)
-            result = result + " and content = \"" + receiveStack.top() + "\"";
+        // if (type == 0)
+        //     result = result + " and content = \"" + sendQueue.front().second + "\"";
+        // else if (type == 1)
+        //     result = result + " and content = \"" + receiveStack.top() + "\"";
 
         if (type != 2)
             result = result + " at " + std::to_string(simTime().dbl());
@@ -264,15 +294,15 @@ namespace cmpn405_datalinklayer
             outFile << "- node 4 end of input file" << endl;
             outFile << "- node 5 end of input file" << endl;
         }
-        outFile << "- total transmission time= " << totalTime << endl;
-        outFile << "- total number of transmissions= " << transNum << endl;
-        outFile << "- the network throughput= " << correctNum / totalTime << endl;
+        outFile << "- total transmission time = " << totalTime << endl;
+        outFile << "- total number of transmissions = " << transNum << endl;
+        outFile << "- the network throughput = " << correctNum / totalTime << endl;
         outFile.close();
     }
 
     void Node::initialize()
     {
-        timeout_message = new cMessage("Timeout!");
+        // windowSize = getParentModule()->par("WindowSize");
     }
 
     void Node::handleMessage(cMessage *msg)
@@ -280,15 +310,12 @@ namespace cmpn405_datalinklayer
         if (msg->isSelfMessage())
         {
             EV << "Timeout!\n";
-            Frame_Base *fmsg = new Frame_Base(
-                {-1, (unsigned int)simTime().dbl()},
-                nullptr,
-                0,
-                0,
-                message_to_receive);
+            int message_id = atoi(msg->getName());
 
-            send(fmsg, "pairPort$o");
-            return scheduleAt(simTime() + par("Timeout").doubleValue(), timeout_message);
+            message_t to_send = *std::find_if(sendWindow.begin(), sendWindow.end(), [&](const message_t &message)
+                                              { return message.id == message_id; });
+
+            return sendMessage(to_send);
         }
 
         const std::string inputPort = msg->getArrivalGate()->getName();
@@ -296,12 +323,12 @@ namespace cmpn405_datalinklayer
         {
             openFile(msg->getName());
             if (msg->getKind())
-                sendMessage();
+                sender();
 
             return cancelAndDelete(msg);
         }
 
         Frame_Base *fmsg = check_and_cast<Frame_Base *>(msg);
-        receiveMessage(fmsg);
+        receiver(fmsg);
     }
 }
