@@ -146,8 +146,9 @@ namespace cmpn405_datalinklayer
             message.timeout_message = new cMessage(timeout_text.c_str());
             sendWindow.push_back(message);
 
+            //send next msg
             sendMessage(message, ack, piggyback_id);
-            message.error = "0000";
+            message.error = "0000"; // to make sure that when we send the Nack we resend the msg with 0 error
         }
     }
 
@@ -169,7 +170,7 @@ namespace cmpn405_datalinklayer
             is -1 if no (n)ack, number if there is (n)ack
         
         */
-
+        //check if the msg has Ack or not
         EV << "I am node #" << getIndex() << '\n';
         if (const int pb_id = fmsg->getPiggyback_id(); pb_id != -1)
         {
@@ -177,6 +178,7 @@ namespace cmpn405_datalinklayer
             EV << "Got " << (ack ? "ACK" : "NACK") << " on message id " << pb_id << '\n';
             correctNum += ack;
 
+            //advance the sliding window
             while (ack && sendWindow.size() > 0 && sendWindow.front().id <= pb_id)
                 sendWindow.erase(sendWindow.begin());
         }
@@ -192,11 +194,15 @@ namespace cmpn405_datalinklayer
             EV << "Got message #" << header.message_id << " at time " << header.timestamp << ": " << message << " -- with CRC: " << std::bitset<8>(crcByte) << '\n';
 
             bool ack = false;
+            //if msg is correct, and it's more than the frame expected and it's within the windowSize
             if (!crcByte && header.message_id >= message_to_receive && header.message_id < message_to_receive + windowSize)
             {
                 ack = true;
                 receiveBuffer.insert({header.message_id, message});
             }
+            //else send Nack TODO
+
+            //move msgs from Buffer to Stack when the first msg is received and and when there's anything in the buffer
             while (receiveBuffer.size() > 0 && receiveBuffer.begin()->first == message_to_receive)
             {
                 message_to_receive++;
