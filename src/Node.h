@@ -7,6 +7,7 @@
 #include <queue>
 #include <stack>
 #include "Frame_m.h"
+#include "hamming.h"
 
 using namespace omnetpp;
 
