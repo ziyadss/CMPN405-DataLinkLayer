@@ -1,7 +1,5 @@
-0000 A flower, sometimes known as a bloom or blossom
-0000 is the reproductive$ structure found in flowering plants
-0000 (plants of the division Magnoliophyta, also called/ angiosperms$).
-0000 The biological function of a flower is to facilitate reproduction,
-0000 usually by providing a mechanism for the union of sperm with eggs.
-0000 Flowers may facilitate outcrossing$
-0000 (fusion of sperm and eggs from different individuals in a population)
+1000 node 0 message 0
+0000 node 0 message 1
+0000 node 0 message 2
+0000 node 0 message 3
+0000 node 0 message 4

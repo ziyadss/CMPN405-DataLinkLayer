@@ -38,14 +38,13 @@ std::string to_string(const std::vector<bool> &bits)
  * @param n 
  * @return unsigned int 
  */
-unsigned int inc_log_ceil(const unsigned int n)
+unsigned int inc_log_ceil(unsigned int n)
 {
-    unsigned int y = 0, z = 1;
-    while (z <= n)
-    {
+    unsigned int y = 1;
+
+    while (n >>= 1)
         y++;
-        z <<= 1;
-    }
+
     return y;
 }
 
@@ -75,9 +74,10 @@ std::string hamming_encode(const std::string &payload)
 
     // For every bit, see which parity bits it affects and flip them if the bit is 1
     for (size_t i = 0; i < k + r; i++)
-        for (size_t j = 0; j < r; j++)
-            if (((i + 1) >> j) & parity_included[i])
-                parity_included[(1 << j) - 1].flip();
+        if (parity_included[i])
+            for (size_t j = 0; j < r; j++)
+                if (((i + 1) >> j) & 1)
+                    parity_included[(1 << j) - 1].flip();
 
     return to_string(parity_included);
 }
@@ -99,9 +99,10 @@ std::pair<int, std::string> hamming_decode(const std::string &payload)
 
     // For every data bit, see which parity bits it affects and flip them if the bit is 1
     for (size_t i = 0; i < n; i++)
-        for (size_t j = 0; j < r; j++)
-            if (((i + 1) >> j) & bits[i] && (i & (i + 1)))
-                bits[(1 << j) - 1].flip();
+        if (bits[i] && (i & (i + 1)))
+            for (size_t j = 0; j < r; j++)
+                if (((i + 1) >> j) & 1)
+                    bits[(1 << j) - 1].flip();
 
     std::vector<bool> message(n - r);
     int error_idx = -1;

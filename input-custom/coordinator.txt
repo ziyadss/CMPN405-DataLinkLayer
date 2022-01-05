@@ -1,6 +1,2 @@
 0 input0.txt start 3  
 1 input1.txt 
-2 input2.txt start 7
-3 input3.txt 
-4 input4.txt 
-5 input5.txt start 2
