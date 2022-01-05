@@ -1,29 +1,8 @@
 - Node 0 sends message with id = 0 and content = "node 0 message 0" at 3.000000 with modification and piggybacking ACK number -1
 - Node 0 sends message with id = 1 and content = "node 0 message 1" at 3.000000 and piggybacking ACK number -1
 - Node 0 sends message with id = 2 and content = "node 0 message 2" at 3.000000 and piggybacking ACK number -1
-- Node 1 received message with id = 0 and content = "node 0 mussage 0" at 3.000000 with modification and piggybacking ACK number -1
-- Node 1 sends message with id = 0 and content = "node 1 message 0" at 3.000000 and piggybacking NACK number 0
-- Node 1 sends message with id = 1 and content = "node 1 message 1" at 3.000000 and piggybacking NACK number 0
-- Node 1 sends message with id = 2 and content = "node 1 message 2" at 3.000000 and piggybacking NACK number 0
-- Node 1 received message with id = 1 and content = "node 0 message 1" at 3.000000 and piggybacking ACK number -1
-- Node 1 received message with id = 2 and content = "node 0 message 2" at 3.000000 and piggybacking ACK number -1
-- Node 0 sends message with id = 0 and content = "node 0 message 0" at 3.000000 and piggybacking ACK number -1
 - Node 1 received message with id = 0 and content = "node 0 message 0" at 3.000000 and piggybacking ACK number -1
-- Node 0 received message with id = -1 and content = "" at 3.000000 and piggybacking ACK number 3
-- Node 0 sends message with id = 3 and content = "node 0 message 3" at 3.000000 and piggybacking ACK number 0
-- Node 0 sends message with id = 4 and content = "node 0 message 4" at 3.000000 and piggybacking ACK number 0
-- Node 1 received message with id = 3 and content = "node 0 message 3" at 3.000000 and piggybacking ACK number 0
-- Node 1 received message with id = 4 and content = "node 0 message 4" at 3.000000 and piggybacking ACK number 0
-- Node 0 received message with id = -1 and content = "" at 3.000000 and piggybacking ACK number 4
-- Node 0 received message with id = -1 and content = "" at 3.000000 and piggybacking ACK number 5
-- Node 1 received message with id = -1 and content = "" at 3.000000 and piggybacking ACK number 0
-- Node 0 received message with id = -1 and content = "" at 3.000000 and piggybacking ACK number 5
-- Node 1 sends message with id = 0 and content = "node 1 message 0" at 5.000000 and piggybacking ACK number -1
-- Node 1 sends message with id = 1 and content = "node 1 message 1" at 5.000000 and piggybacking ACK number -1
-- Node 1 sends message with id = 2 and content = "node 1 message 2" at 5.000000 and piggybacking ACK number -1
-- Node 0 received message with id = 0 and content = "node 1 message 0" at 5.000000 and piggybacking ACK number -1
-- Node 0 received message with id = 1 and content = "node 1 message 1" at 5.000000 and piggybacking ACK number -1
-- Node 0 received message with id = 2 and content = "node 1 message 2" at 5.000000 and piggybacking ACK number -1
-- Node 1 received message with id = -1 and content = "" at 5.000000 and piggybacking ACK number 1
-- Node 1 received message with id = -1 and content = "" at 5.000000 and piggybacking ACK number 2
-- Node 1 received message with id = -1 and content = "" at 5.000000 and piggybacking ACK number 3
+- Node 1 sends message with id = 0 and content = "node 1 message 0" at 3.000000 and piggybacking ACK number 1
+- Node 1 sends message with id = 1 and content = "node 1 message 1" at 3.000000 and piggybacking ACK number 1
+- Node 1 sends message with id = 2 and content = "node 1 message 2" at 3.000000 and piggybacking ACK number 1
+- Node 1 received message with id = 1 and content = "node 0 message 1" at 3.000000 and piggybacking ACK number -1

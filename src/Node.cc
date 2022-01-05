@@ -212,7 +212,7 @@ namespace cmpn405_datalinklayer
         std::string message = "";
         if (header.message_id != -1)
         {
-            message = DeFraming(fmsg->getPayload());
+            message = fmsg->getPayload();
 
             int error_loc = -1;
             uint8_t crcByte;
@@ -228,6 +228,8 @@ namespace cmpn405_datalinklayer
                 crcByte = CRC(crcString);
             }
 
+            message = DeFraming(message);
+
             EV << "Got message #" << header.message_id << " at time " << header.timestamp << ": " << message;
 
             if (useHamming)
@@ -240,7 +242,7 @@ namespace cmpn405_datalinklayer
             else
                 EV << " -- with CRC: " << std::bitset<8>(crcByte) << '\n';
 
-            no_error = useHamming ? error_loc == -1 : !crcByte;
+            no_error = useHamming || !crcByte;
             ack = no_error && header.message_id == message_to_receive;
             bool accepted = no_error && header.message_id >= message_to_receive && header.message_id < message_to_receive + windowSize;
             EV << "no_error: " << std::to_string(no_error) << " header.message_id: " << std::to_string(header.message_id) << " message_to_receive: " << std::to_string(message_to_receive) << " windowSize: " << std::to_string(windowSize) << " ack: " << std::to_string(ack) << std::endl;
