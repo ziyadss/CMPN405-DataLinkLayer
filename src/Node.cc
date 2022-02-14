@@ -8,15 +8,17 @@ namespace cmpn405_datalinklayer
         std::ifstream inFile(fileName);
 
         std::string line;
+        int id = 0;
+
         while (!inFile.eof())
         {
-            std::string errorTemp, msgTemp;
             getline(inFile, line);
-            errorTemp = line.substr(0, 4);
-            msgTemp = line.substr(5, line.length());
-            sendQueue.push({errorTemp, msgTemp});
+            std::string error = line.substr(0, 4);
+            std::string payload = line.substr(5, line.length());
+            sendQueue.push({id++, error, payload, nullptr});
         }
     }
+
     std::string Node::Framing(const std::string &msg)
     {
         std::string payload("$");
@@ -66,25 +68,13 @@ namespace cmpn405_datalinklayer
         return rem;
     }
 
-    void Node::sendMessage(const bool ack = true, const int piggyback_id = -1)
+    void Node::sendMessage(const message_t &message, const bool ack = true, const int piggyback_id = -1)
     {
-        if (sendQueue.empty())
-        {
-            Frame_Base *fmsg = new Frame_Base(
-                {-1, (unsigned int)simTime().dbl()},
-                nullptr,
-                0,
-                ack,
-                piggyback_id);
-            send(fmsg, "pairPort$o");
-            // calcResults(simTime().dbl());
-            return;
-        }
-
-        std::string errors = sendQueue.front().first;
-        std::string payload = Framing(sendQueue.front().second);
+        std::string payload = Framing(message.payload);
+        if (useHamming)
+            payload = hamming_encode(payload);
         Frame_Base *fmsg = new Frame_Base(
-            {message_to_send++, (unsigned int)simTime().dbl()},
+            {message.id, (unsigned int)simTime().dbl()},
             payload.c_str(),
             CRC(payload),
             ack,
@@ -93,10 +83,11 @@ namespace cmpn405_datalinklayer
         transNum++;
         int type = 0;
         double delay = 0;
-
-        if (errors[0] == '1')
+        bool modified = false;
+        if (message.error[0] == '1')
         {
             //Modify
+            modified = true;
             int rand = uniform(0, payload.length());
             int bit = uniform(0, 8);
             EV << "Modified byte " << rand << ", bit " << bit << endl;
@@ -104,84 +95,185 @@ namespace cmpn405_datalinklayer
             payload[rand] ^= 1 << bit;
             fmsg->setPayload(payload.c_str());
         }
-        if (errors[1] == '1')
+        if (message.error[1] == '1')
         {
             //Duplicate
             transNum++;
-            EV << "Duplicated message " << fmsg->getHeader().message_id << std::endl;
+            EV << "Duplicated message " << message.id << std::endl;
             Frame_Base *dupMsg = fmsg->dup();
             sendDelayed(dupMsg, 0.01, "pairPort$o");
-            writeToFile(type, ack, piggyback_id, message_to_send - 1);
+            writeToFile(type, ack, piggyback_id, message.id, message.payload, modified);
         }
 
         //Delay
-        if (errors[2] == '1')
+        if (message.error[2] == '1')
             delay = par("Delay").doubleValue();
 
         //Loss
-        if (errors[3] == '0')
+        if (message.error[3] == '0')
             sendDelayed(fmsg, delay, "pairPort$o");
         else
         {
             type = 2;
-            EV << "Lost message " << fmsg->getHeader().message_id << std::endl;
+            EV << "Lost message " << message.id << std::endl;
             cancelAndDelete(fmsg);
         }
 
-        writeToFile(type, ack, piggyback_id, message_to_send - 1);
-
-        sendQueue.pop();
-        // pop on ACK in phase 2
+        writeToFile(type, ack, piggyback_id, message.id, message.payload, modified);
+        scheduleAt(simTime() + par("Timeout").doubleValue(), message.timeout_message);
     }
 
-    void Node::receiveMessage(Frame_Base *fmsg)
+    void Node::sender(const bool ack = true, const int piggyback_id = -1, int last_rcv = 0)
     {
-        if (timeout_message)
-            cancelEvent(timeout_message);
+        if (sendQueue.empty())
+        {
+            if (last_rcv == -1 && sendWindow.empty())
+                return; // calcResults(simTime().dbl());
+
+            Frame_Base *fmsg = new Frame_Base(
+                {-1, (unsigned int)simTime().dbl()},
+                nullptr,
+                0,
+                ack,
+                piggyback_id);
+            return send(fmsg, "pairPort$o");
+        }
+
+        // Move messages from sendQueue to sendWindow
+        while (sendWindow.size() < windowSize && sendQueue.size() > 0)
+        {
+            auto message = sendQueue.front();
+            sendQueue.pop();
+
+            // Prepare timeout timer and push the message to sendWindow
+            auto timeout_text = std::to_string(message.id);
+            message.timeout_message = new cMessage(timeout_text.c_str());
+            sendWindow.push_back(message);
+
+            //send next msg
+            sendMessage(message, ack, piggyback_id);
+            message.error = "0000"; // to make sure that when we send the Nack we resend the msg with 0 error
+
+            EV << "sendWindow size: " << std::to_string(sendWindow.size()) << std::endl;
+        }
+    }
+
+    void printMessageVec(std::vector<message_t> messageQueue)
+    {
+        EV << "Printing message queue" << std::endl;
+        for (auto message : messageQueue)
+        {
+            EV << "Message id: " << message.id << std::endl;
+            EV << "Message payload: " << message.payload << std::endl;
+        }
+    };
+
+    void Node::receiver(Frame_Base *fmsg)
+    {
+
+        //check if the msg has Ack or not
+        EV << "I am node #" << getIndex() << '\n';
+        if (const int pb_id = fmsg->getPiggyback_id(); pb_id != -1)
+        {
+            const bool ack = fmsg->getAck();
+            EV << "Got " << (ack ? "ACK" : "NACK") << " on message id " << pb_id << '\n';
+            correctNum += ack;
+
+            //advance the sliding window
+
+            printMessageVec(sendWindow);
+
+            if (!ack)
+            {
+                if (last_nack == pb_id)
+                    return;
+                last_nack = pb_id;
+                message_t to_send = *std::find_if(sendWindow.begin(), sendWindow.end(), [&](const message_t &message)
+                                                  { return message.id == pb_id; });
+
+                cancelEvent(to_send.timeout_message);
+                to_send.error = "0000";
+                return sendMessage(to_send);
+            }
+            else
+                while (sendWindow.size() > 0 && sendWindow.front().id < pb_id)
+                {
+                    auto it = sendWindow.begin();
+                    cancelEvent(it->timeout_message);
+                    delete it->timeout_message;
+                    sendWindow.erase(it);
+
+                    EV << "message removed from sendWindow, size now: " << std::to_string(sendWindow.size()) << std::endl;
+                }
+        }
 
         const Header header = fmsg->getHeader();
-
-        if (header.message_id == -1)
+        bool ack = true, no_error = true;
+        std::string message = "";
+        if (header.message_id != -1)
         {
-            if (timeout_message)
+            message = fmsg->getPayload();
+
+            int error_loc = -1;
+            uint8_t crcByte;
+            if (useHamming)
             {
-                delete timeout_message;
-                timeout_message = nullptr;
+                auto error_and_msg = hamming_decode(message);
+                message = error_and_msg.second;
+                error_loc = error_and_msg.first;
+            }
+            else
+            {
+                const std::string crcString = std::string(fmsg->getPayload()) + fmsg->getTrailer();
+                crcByte = CRC(crcString);
             }
 
-            if (fmsg->getPiggyback_id() == -1)
-                return cancelAndDelete(fmsg);
+            message = DeFraming(message);
 
-            EV << "I am node #" << getIndex() << '\n';
-            EV << "Got " << (fmsg->getAck() ? "ACK" : "NACK") << " on message_id " << fmsg->getPiggyback_id() << '\n';
-            correctNum += fmsg->getAck();
-            cancelAndDelete(fmsg);
-            return sendMessage();
+            EV << "Got message #" << header.message_id << " at time " << header.timestamp << ": " << message;
+
+            if (useHamming)
+            {
+                if (error_loc == -1)
+                    EV << " -- with no error\n";
+                else
+                    EV << "-- with error located at bit " << std::to_string(error_loc) << " and fixed\n";
+            }
+            else
+                EV << " -- with CRC: " << std::bitset<8>(crcByte) << '\n';
+
+            no_error = useHamming || !crcByte;
+            ack = no_error && header.message_id == message_to_receive;
+            bool accepted = no_error && header.message_id >= message_to_receive && header.message_id < message_to_receive + windowSize;
+            EV << "no_error: " << std::to_string(no_error) << " header.message_id: " << std::to_string(header.message_id) << " message_to_receive: " << std::to_string(message_to_receive) << " windowSize: " << std::to_string(windowSize) << " ack: " << std::to_string(ack) << std::endl;
+            EV << "accepted: " << std::to_string(accepted) << std::endl;
+            EV << "ack: " << std::to_string(ack) << std::endl;
+            //if msg is correct, and it's more than the frame expected and it's within the windowSize
+            if (accepted)
+            {
+                receiveBuffer.insert({header.message_id, message});
+                EV << "Buffered message #" << header.message_id << '\n';
+            }
+
+            //else send Nack TODO
+
+            //move msgs from Buffer to Stack when the first msg is received and and when there's anything in the buffer
+            while (receiveBuffer.size() > 0 && receiveBuffer.begin()->first == message_to_receive)
+            {
+                message_to_receive++;
+                receiveStack.push(receiveBuffer.begin()->second);
+                receiveBuffer.erase(receiveBuffer.begin());
+                EV << "Message #" << message_to_receive - 1 << " moved to receiveStack\n";
+            }
         }
 
-        std::string crcString = std::string(fmsg->getPayload()) + fmsg->getTrailer();
-        const uint8_t crcByte = CRC(crcString);
-        const std::string message = DeFraming(fmsg->getPayload());
-
-        EV << "I am node #" << getIndex() << '\n';
-        EV << "Got " << (fmsg->getAck() ? "ACK" : "NACK") << " on message_id " << fmsg->getPiggyback_id() << '\n';
-        EV << "Got message #" << header.message_id << " at time " << header.timestamp << ": " << message << " -- with CRC: " << std::bitset<8>(crcByte) << '\n';
-
-        receiveStack.push(message);
+        writeToFile(1, fmsg->getAck(), fmsg->getPiggyback_id(), header.message_id, message, !no_error);
+        sender(ack, message_to_receive, header.message_id);
 
         cancelAndDelete(fmsg);
-
-        const bool ack = !crcByte && header.message_id == message_to_receive;
-        message_to_receive += ack;
-
-        writeToFile(1, ack, message_to_receive, header.message_id);
-        sendMessage(ack, message_to_receive);
-
-        if (timeout_message)
-            scheduleAt(simTime() + par("Timeout").doubleValue(), timeout_message);
     }
 
-    void Node::writeToFile(int type, bool ack, int ackNum, int msg_id)
+    void Node::writeToFile(int type, bool ack, int ackNum, int msg_id, std::string message, bool modified = false)
     {
         std::ofstream outFile;
         std::string filename;
@@ -210,31 +302,27 @@ namespace cmpn405_datalinklayer
 
         result += std::to_string(msg_id);
 
-        if (type == 0)
-            result = result + " and content = \"" + sendQueue.front().second + "\"";
-        else if (type == 1)
-            result = result + " and content = \"" + receiveStack.top() + "\"";
+        if (type == 0 || type == 1)
+            result = result + " and content = \"" + message + "\"";
 
         if (type != 2)
             result = result + " at " + std::to_string(simTime().dbl());
 
         if (ack && (type == 0 || type == 1))
         {
-            // std::string errors = sendQueue.front().first;
-            // if (errors[0] == '1')
-            //     result += " with modification ";
+            if (modified)
+                result += " with modification";
 
-            result = result + " and piggybacking Ack number " + std::to_string(ackNum);
+            result = result + " and piggybacking ACK number " + std::to_string(ackNum);
         }
         else if (type == 0 || type == 1)
-            result = result + " and NACK number " + std::to_string(ackNum);
+            result = result + " and piggybacking NACK number " + std::to_string(ackNum);
 
         outFile << result << endl;
     }
 
     void Node::calcResults(double totalTime)
     {
-        std::ofstream outFile;
         std::string filename;
         if (getIndex() == 0 || getIndex() == 1)
             filename = "pair01.txt";
@@ -243,36 +331,22 @@ namespace cmpn405_datalinklayer
         else
             filename = "pair45.txt";
 
-        outFile.open(filename, std::fstream::app);
+        std::ofstream outFile(filename, std::fstream::app);
         if (!outFile)
             EV << "Error in opening output file" << endl;
 
         outFile << "- '''''''''''' " << endl;
-
-        if (getIndex() == 0 || getIndex() == 1)
-        {
-            outFile << "- node 0 end of input file" << endl;
-            outFile << "- node 1 end of input file" << endl;
-        }
-        else if (getIndex() == 2 || getIndex() == 3)
-        {
-            outFile << "- node 2 end of input file" << endl;
-            outFile << "- node 3 end of input file" << endl;
-        }
-        else
-        {
-            outFile << "- node 4 end of input file" << endl;
-            outFile << "- node 5 end of input file" << endl;
-        }
-        outFile << "- total transmission time= " << totalTime << endl;
-        outFile << "- total number of transmissions= " << transNum << endl;
-        outFile << "- the network throughput= " << correctNum / totalTime << endl;
+        outFile << "- Node " << getIndex() << " end of input file" << endl;
+        outFile << "- Total transmission time = " << totalTime << endl;
+        outFile << "- Total number of transmissions = " << transNum << endl;
+        outFile << "- The network throughput = " << correctNum / totalTime << endl;
         outFile.close();
     }
 
     void Node::initialize()
     {
-        timeout_message = new cMessage("Timeout!");
+        windowSize = getParentModule()->par("WindowSize").intValue();
+        useHamming = getParentModule()->par("UseHamming").boolValue();
     }
 
     void Node::handleMessage(cMessage *msg)
@@ -280,15 +354,12 @@ namespace cmpn405_datalinklayer
         if (msg->isSelfMessage())
         {
             EV << "Timeout!\n";
-            Frame_Base *fmsg = new Frame_Base(
-                {-1, (unsigned int)simTime().dbl()},
-                nullptr,
-                0,
-                0,
-                message_to_receive);
+            int message_id = atoi(msg->getName());
 
-            send(fmsg, "pairPort$o");
-            return scheduleAt(simTime() + par("Timeout").doubleValue(), timeout_message);
+            message_t to_send = *std::find_if(sendWindow.begin(), sendWindow.end(), [&](const message_t &message)
+                                              { return message.id == message_id; });
+
+            return sendMessage(to_send);
         }
 
         const std::string inputPort = msg->getArrivalGate()->getName();
@@ -296,12 +367,12 @@ namespace cmpn405_datalinklayer
         {
             openFile(msg->getName());
             if (msg->getKind())
-                sendMessage();
+                sender();
 
             return cancelAndDelete(msg);
         }
 
         Frame_Base *fmsg = check_and_cast<Frame_Base *>(msg);
-        receiveMessage(fmsg);
+        receiver(fmsg);
     }
 }
